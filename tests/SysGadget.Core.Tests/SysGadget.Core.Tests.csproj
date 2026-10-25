@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <Compile Include="CpuCounterProviderTests.cs" />
+    <Compile Include="MemoryProviderTests.cs" />
     <Compile Include="ProcessorInstanceNameTests.cs" />
   </ItemGroup>
 

@@ -10,6 +10,8 @@
   <ItemGroup>
     <Compile Include="CoreLoad.cs" />
     <Compile Include="CpuCounterProvider.cs" />
+    <Compile Include="MemoryProvider.cs" />
+    <Compile Include="MemorySample.cs" />
     <Compile Include="ProcessorInstanceName.cs" />
   </ItemGroup>
 
