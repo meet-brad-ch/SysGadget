@@ -56,6 +56,9 @@
                       IsChecked="{Binding AlwaysOnTop}" />
         </Grid>
 
+        <CheckBox Margin="0,4,0,0" IsChecked="{Binding ThinBar}"
+                  Content="Thin bar: only the first item of each group (order them below)" />
+
         <CheckBox Margin="0,4,0,0" IsChecked="{Binding Horizontal}"
                   Content="Floating window: groups side by side as columns" />
 

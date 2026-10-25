@@ -13,12 +13,14 @@ namespace SysGadget.App.Tests
         /// Regression: ProgressBar.Value bound two-way by default to the read-only RowViewModel.Percent,
         /// which threw a XamlParseException as soon as the first row was laid out and crashed the gadget.
         /// The window is shown far off-screen so the dispatcher really builds every template: card header,
-        /// line rows with and without bars, the compact strip and a collapsed card.
+        /// line rows with and without bars, the compact strip, as cards or as the thin bar.
         /// </summary>
         [Theory]
-        [InlineData(System.Windows.Controls.Orientation.Vertical)]
-        [InlineData(System.Windows.Controls.Orientation.Horizontal)]
-        public void Layout_OfEveryTemplate_RaisesNoDispatcherException_AndFillsTheWindow(System.Windows.Controls.Orientation orientation)
+        [InlineData(System.Windows.Controls.Orientation.Vertical, false)]
+        [InlineData(System.Windows.Controls.Orientation.Horizontal, false)]
+        [InlineData(System.Windows.Controls.Orientation.Horizontal, true)]
+        public void Layout_OfEveryTemplate_RaisesNoDispatcherException_AndFillsTheWindow(
+            System.Windows.Controls.Orientation orientation, bool thin)
         {
             StaRunner.Run(() =>
             {
@@ -29,7 +31,7 @@ namespace SysGadget.App.Tests
                     args.Handled = true;
                 };
 
-                GadgetViewModel viewModel = new GadgetViewModel { PanelOrientation = orientation };
+                GadgetViewModel viewModel = new GadgetViewModel { PanelOrientation = orientation, Thin = thin };
                 GadgetWindow window = new GadgetWindow(viewModel)
                 {
                     WindowStartupLocation = WindowStartupLocation.Manual,
@@ -43,18 +45,18 @@ namespace SysGadget.App.Tests
                 };
                 viewModel.Update(new[]
                 {
-                    new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new[]
+                    new GroupSection(MeterCatalog.CpuGroup, "CPU", new[]
                     {
                         new MeterRow("Total", "20 %", 20.0, true),
                         new MeterRow("Core 0", "12 %", 12.0, true, true),
                         new MeterRow("Core 1", "95 %", 95.0, true, true),
                     }),
-                    new GroupSection(MeterCatalog.GpuGroup, "GPU", false, new[]
+                    new GroupSection(MeterCatalog.GpuGroup, "GPU", new[]
                     {
                         new MeterRow("Load", "80 %", 80.0, true),
                         new MeterRow("Down", "1.0 KB/s", 0.0, false),
                     }),
-                    new GroupSection(MeterCatalog.SystemGroup, "System", true, new[]
+                    new GroupSection(MeterCatalog.SystemGroup, "System", new[]
                     {
                         new MeterRow("Time", "Sun 08:50:19", 0.0, false),
                     }),
@@ -67,7 +69,7 @@ namespace SysGadget.App.Tests
                 window.Close();
 
                 Assert.Empty(dispatcherErrors);
-                Assert.True(height > 80, "the cards were not laid out, height " + height);
+                Assert.True(height > (thin ? 30 : 80), "the cards were not laid out, height " + height);
                 if (orientation == System.Windows.Controls.Orientation.Horizontal)
                 {
                     Assert.True(columnsWidth > 3 * viewModel.SectionWidth, "the three cards are not side by side, width " + columnsWidth);

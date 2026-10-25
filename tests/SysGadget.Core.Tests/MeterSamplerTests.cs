@@ -90,17 +90,43 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Sample_PassesCollapsedState_AndCompactCoreRows()
+        public void Sample_CompactCores_MarksTheCoreRowsCompact()
         {
             using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.CpuCores);
-                settings.SetCollapsed(MeterCatalog.CpuGroup, true);
                 settings.UseCompactCores = true;
 
                 GroupSection cpu = sampler.Sample(settings, Context).Single();
 
-                Assert.True(cpu.Collapsed);
+                Assert.All(cpu.Rows, r => Assert.True(r.Compact));
+            }
+        }
+
+        [Fact]
+        public void Sample_ThinBar_ShowsOneLineOfTheFirstVisibleItemOfEachGroup_InItsOrder()
+        {
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            {
+                GadgetSettings settings = OnlyItems(MeterCatalog.CpuTotal, MeterCatalog.CpuCores, MeterCatalog.Ram, MeterCatalog.Commit,
+                    MeterCatalog.Time, MeterCatalog.Uptime, MeterCatalog.NetworkRates, MeterCatalog.Disks);
+                settings.ThinBar = true;
+                settings.MoveItem(MeterCatalog.Commit, -1);
+                settings.MoveItem(MeterCatalog.Uptime, -1);
+
+                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
+
+                Assert.Equal("Total", sections.Single(s => s.Id == MeterCatalog.CpuGroup).Rows.Single().Label);
+                Assert.Equal("Commit", sections.Single(s => s.Id == MeterCatalog.MemoryGroup).Rows.Single().Label);
+                Assert.Equal("Uptime", sections.Single(s => s.Id == MeterCatalog.SystemGroup).Rows.Single().Label);
+                Assert.Equal("Down", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().Label);
+                Assert.True(sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single().HasBar);
+
+                settings.UseCompactCores = true;
+                settings.MoveItem(MeterCatalog.CpuCores, -1);
+                GroupSection cpu = sampler.Sample(settings, Context).Single(s => s.Id == MeterCatalog.CpuGroup);
+
+                Assert.Equal(Environment.ProcessorCount, cpu.Rows.Count);
                 Assert.All(cpu.Rows, r => Assert.True(r.Compact));
             }
         }

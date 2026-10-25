@@ -29,7 +29,7 @@ namespace SysGadget.Core
         {
             List<GroupSetting> groups = settings.Groups.Where(g => g.Visible && g.Items.Any(i => i.Visible)).ToList();
             HashSet<string> needed = new HashSet<string>(
-                groups.SelectMany(g => g.Items.Where(i => i.Visible))
+                groups.SelectMany(g => ShownItems(g, settings))
                     .Select(i => MeterCatalog.GetItem(i.Id).SourceId)
                     .Where(sourceId => registry.UnavailableReason(sourceId, settings) == null));
 
@@ -66,12 +66,29 @@ namespace SysGadget.Core
         private GroupSection BuildSection(GroupSetting group, GadgetSettings settings, Dictionary<string, object> snapshots)
         {
             List<MeterRow> rows = new List<MeterRow>();
-            foreach (ItemSetting item in group.Items.Where(i => i.Visible))
+            foreach (ItemSetting item in ShownItems(group, settings))
             {
-                rows.AddRange(ItemRows(item.Id, settings, snapshots));
+                IReadOnlyList<MeterRow> itemRows = ItemRows(item.Id, settings, snapshots);
+                rows.AddRange(settings.ThinBar ? FirstLine(itemRows) : itemRows);
             }
 
-            return new GroupSection(group.Id, MeterCatalog.GetGroup(group.Id).Title, group.Collapsed, rows);
+            return new GroupSection(group.Id, MeterCatalog.GetGroup(group.Id).Title, rows);
+        }
+
+        /// <summary>
+        /// The thin bar keeps one line per card: the first row, or the whole strip when the item is
+        /// drawn as a strip (the strip is one line of cells).
+        /// </summary>
+        private static IEnumerable<MeterRow> FirstLine(IReadOnlyList<MeterRow> rows)
+        {
+            return rows.Count > 0 && rows[0].Compact ? rows : rows.Take(1);
+        }
+
+        /// <summary>The visible items of a group; in the thin bar only the first of them.</summary>
+        private static IEnumerable<ItemSetting> ShownItems(GroupSetting group, GadgetSettings settings)
+        {
+            IEnumerable<ItemSetting> visible = group.Items.Where(i => i.Visible);
+            return settings.ThinBar ? visible.Take(1) : visible;
         }
 
         private IReadOnlyList<MeterRow> ItemRows(string itemId, GadgetSettings settings, Dictionary<string, object> snapshots)

@@ -14,8 +14,6 @@ namespace SysGadget.App
         private const double BorderTint = 0.45;
         private static readonly Color CardBase = Color.FromRgb(0x1C, 0x1F, 0x27);
 
-        private bool isCollapsed;
-
         /// <summary>Creates the view of a group.</summary>
         /// <param name="id">Group id.</param>
         /// <param name="title">Heading.</param>
@@ -50,28 +48,14 @@ namespace SysGadget.App
         /// <summary>The compact strip cells (cores in strip mode).</summary>
         public ObservableCollection<RowViewModel> CompactRows { get; } = new ObservableCollection<RowViewModel>();
 
-        /// <summary>Whether only the header is shown.</summary>
-        public bool IsCollapsed
-        {
-            get => isCollapsed;
-            set
-            {
-                Set(ref isCollapsed, value);
-                RaiseBody();
-            }
-        }
+        /// <summary>Whether there are line rows.</summary>
+        public bool HasRows => Rows.Count > 0;
 
-        /// <summary>Whether the line rows are shown.</summary>
-        public bool ShowRows => !isCollapsed && Rows.Count > 0;
+        /// <summary>Whether there are strip cells.</summary>
+        public bool HasStrip => CompactRows.Count > 0;
 
-        /// <summary>Whether the core strip is shown.</summary>
-        public bool ShowStrip => !isCollapsed && CompactRows.Count > 0;
-
-        /// <summary>Whether anything is shown below the header.</summary>
-        public bool ShowBody => ShowRows || ShowStrip;
-
-        /// <summary>Whether the group has rows to hide, so the header offers collapsing.</summary>
-        public bool CanCollapse => Rows.Count > 0 || CompactRows.Count > 0;
+        /// <summary>Whether anything is shown below the title.</summary>
+        public bool HasBody => HasRows || HasStrip;
 
         /// <summary>Shows a new sample of the group.</summary>
         /// <param name="section">The sampled group.</param>
@@ -79,8 +63,9 @@ namespace SysGadget.App
         {
             Sync(Rows, section.Rows.Where(r => !r.Compact).ToList());
             Sync(CompactRows, section.Rows.Where(r => r.Compact).ToList());
-            IsCollapsed = section.Collapsed;
-            RaiseBody();
+            Raise(nameof(HasRows));
+            Raise(nameof(HasStrip));
+            Raise(nameof(HasBody));
         }
 
         private static void Sync(ObservableCollection<RowViewModel> target, IReadOnlyList<MeterRow> rows)
@@ -114,14 +99,6 @@ namespace SysGadget.App
             SolidColorBrush brush = new SolidColorBrush(color);
             brush.Freeze();
             return brush;
-        }
-
-        private void RaiseBody()
-        {
-            Raise(nameof(ShowRows));
-            Raise(nameof(ShowStrip));
-            Raise(nameof(ShowBody));
-            Raise(nameof(CanCollapse));
         }
     }
 }

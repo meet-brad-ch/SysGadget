@@ -72,6 +72,24 @@
             </Setter>
         </Style>
 
+        <!-- The core strip: one upright bar per core, side by side. -->
+        <Style x:Key="StripStyle" TargetType="ItemsControl">
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <ProgressBar Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource StripCellStyle}" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Value text of a row that has a bar: sits right of the bar. -->
         <Style x:Key="BarValueStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
@@ -116,55 +134,48 @@
             </Grid>
         </DataTemplate>
 
-        <!-- Each group is a card: header (title, collapse arrow), divider, body. -->
+        <!-- Each group is a card: title, divider, rows, core strip. -->
         <DataTemplate x:Key="GroupTemplate">
             <Border Width="{Binding DataContext.SectionWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                     Margin="0,0,8,8" Padding="9,6,9,6" CornerRadius="6"
                     Background="{Binding CardBrush}" BorderBrush="{Binding CardBorderBrush}"
                     BorderThickness="1">
                 <StackPanel>
-                    <Grid Background="Transparent" Cursor="Hand" MouseLeftButtonDown="OnGroupHeaderMouseDown"
-                          ToolTip="Click to collapse or expand">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Title}" Foreground="{Binding AccentBrush}" FontSize="11.5"
-                                   FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Foreground="{StaticResource DimBrush}" FontSize="10"
-                                   Visibility="{Binding CanCollapse, Converter={StaticResource Visible}}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="&#x25BE;" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsCollapsed}" Value="True">
-                                            <Setter Property="Text" Value="&#x25B8;" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Grid>
+                    <TextBlock Text="{Binding Title}" Foreground="{Binding AccentBrush}" FontSize="11.5"
+                               FontWeight="SemiBold" />
                     <Rectangle Height="1" Fill="{StaticResource DividerBrush}" Margin="0,6,0,6"
-                               Visibility="{Binding ShowBody, Converter={StaticResource Visible}}" />
+                               Visibility="{Binding HasBody, Converter={StaticResource Visible}}" />
                     <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource RowTemplate}"
                                   Grid.IsSharedSizeScope="True"
-                                  Visibility="{Binding ShowRows, Converter={StaticResource Visible}}" />
+                                  Visibility="{Binding HasRows, Converter={StaticResource Visible}}" />
                     <ItemsControl ItemsSource="{Binding CompactRows}" Height="58" Margin="0,2,0,4"
-                                  Visibility="{Binding ShowStrip, Converter={StaticResource Visible}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Rows="1" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <ProgressBar Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource StripCellStyle}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                  Style="{StaticResource StripStyle}"
+                                  Visibility="{Binding HasStrip, Converter={StaticResource Visible}}" />
                 </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Thin bar: one line per card, the title next to the rows of its first item. -->
+        <DataTemplate x:Key="ThinGroupTemplate">
+            <Border Width="{Binding DataContext.SectionWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                    Margin="0,0,8,8" Padding="9,5,9,1" CornerRadius="6"
+                    Background="{Binding CardBrush}" BorderBrush="{Binding CardBorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Title}" Foreground="{Binding AccentBrush}" FontSize="11.5"
+                               FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,0,8,4" />
+                    <StackPanel Grid.Column="1">
+                        <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource RowTemplate}"
+                                      Grid.IsSharedSizeScope="True" />
+                        <ItemsControl ItemsSource="{Binding CompactRows}" Height="22" Margin="0,0,0,4"
+                                      Style="{StaticResource StripStyle}"
+                                      Visibility="{Binding HasStrip, Converter={StaticResource Visible}}" />
+                    </StackPanel>
+                </Grid>
             </Border>
         </DataTemplate>
     </Window.Resources>
@@ -173,6 +184,7 @@
         <ContextMenu>
             <MenuItem Header="Settings..." Click="OnSettingsClick" />
             <MenuItem x:Name="TopmostItem" Header="Always on top" IsCheckable="True" Click="OnTopmostClick" />
+            <MenuItem x:Name="ThinItem" Header="Thin bar" IsCheckable="True" Click="OnThinClick" />
             <Separator />
             <MenuItem Header="Exit" Click="OnExitClick" />
         </ContextMenu>
@@ -183,7 +195,17 @@
             <TextBlock Text="{Binding Status}" Foreground="{StaticResource CriticalBrush}" FontSize="11"
                        TextWrapping="Wrap" Margin="0,0,8,6"
                        Visibility="{Binding HasStatus, Converter={StaticResource Visible}}" />
-            <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupTemplate}">
+            <ItemsControl ItemsSource="{Binding Groups}">
+                <ItemsControl.Style>
+                    <Style TargetType="ItemsControl">
+                        <Setter Property="ItemTemplate" Value="{StaticResource GroupTemplate}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Thin}" Value="True">
+                                <Setter Property="ItemTemplate" Value="{StaticResource ThinGroupTemplate}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ItemsControl.Style>
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <!-- Side by side, the columns stretch to the height of the tallest one. -->

@@ -49,8 +49,9 @@ namespace SysGadget.App
             tray.ExitRequested += RequestExit;
             window.TopmostToggled += SetTopmost;
             tray.TopmostToggled += SetTopmost;
+            window.ThinToggled += SetThin;
+            tray.ThinToggled += SetThin;
             window.DragFinished += SaveFloatingPosition;
-            window.GroupHeaderClicked += ToggleCollapsed;
             timer.Tick += OnTick;
         }
 
@@ -96,6 +97,8 @@ namespace SysGadget.App
             timer.Interval = TimeSpan.FromMilliseconds(settings.IntervalMs);
             window.ShowTopmostState(settings.AlwaysOnTop);
             tray.ShowTopmostState(settings.AlwaysOnTop);
+            window.ShowThinState(settings.ThinBar);
+            tray.ShowThinState(settings.ThinBar);
             ApplyLayout();
             viewModel.Status = null;
             timer.Start();
@@ -126,6 +129,7 @@ namespace SysGadget.App
             window.Topmost = settings.AlwaysOnTop;
             window.DragEnabled = settings.Edge == DockEdge.Floating;
             viewModel.PanelOrientation = SideBySide() ? Orientation.Horizontal : Orientation.Vertical;
+            viewModel.Thin = settings.ThinBar;
 
             if (settings.Edge == DockEdge.Floating)
             {
@@ -296,24 +300,18 @@ namespace SysGadget.App
             settingsWindow.Show();
         }
 
+        private void SetThin(bool thin)
+        {
+            GadgetSettings next = settings.Clone();
+            next.ThinBar = thin;
+            ApplySettings(next);
+        }
+
         private void SetTopmost(bool topmost)
         {
             GadgetSettings next = settings.Clone();
             next.AlwaysOnTop = topmost;
             ApplySettings(next);
-        }
-
-        private void ToggleCollapsed(string groupId)
-        {
-            GadgetSettings next = settings.Clone();
-            next.SetCollapsed(groupId, !next.IsCollapsed(groupId));
-            settings = next;
-            store.Save(settings);
-            viewModel.Find(groupId)!.IsCollapsed = settings.IsCollapsed(groupId); // show it now, not at the next tick
-            if (LayoutFollowsContent())
-            {
-                ApplyLayout();
-            }
         }
 
         private void SaveFloatingPosition()

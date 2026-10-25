@@ -9,11 +9,11 @@ namespace SysGadget.App.Tests
     public class ViewModelTests
     {
         [Fact]
-        public void GroupViewModel_Update_SplitsCompactRows_AndSetsShowFlags()
+        public void GroupViewModel_Update_SplitsCompactRows_AndSetsHasFlags()
         {
             GroupViewModel group = new GroupViewModel(MeterCatalog.CpuGroup, "CPU", Colors.Red);
 
-            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new[]
+            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", new[]
             {
                 new MeterRow("Total", "20 %", 20.0, true),
                 new MeterRow("Core 0", "95 %", 95.0, true, true),
@@ -23,19 +23,18 @@ namespace SysGadget.App.Tests
             Assert.Single(group.CompactRows);
             Assert.Equal("Core 0: 95 %", group.CompactRows[0].ToolTip);
             Assert.Equal(2, group.CompactRows[0].Level);
-            Assert.True(group.ShowRows);
-            Assert.True(group.ShowStrip);
-            Assert.True(group.CanCollapse);
+            Assert.True(group.HasRows);
+            Assert.True(group.HasStrip);
+            Assert.True(group.HasBody);
 
-            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", true, new[] { new MeterRow("Total", "20 %", 20.0, true) }));
+            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", new[] { new MeterRow("Total", "20 %", 20.0, true) }));
 
-            Assert.True(group.IsCollapsed);
-            Assert.False(group.ShowBody);
-            Assert.True(group.CanCollapse);
+            Assert.True(group.HasRows);
+            Assert.False(group.HasStrip);
 
-            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new MeterRow[0]));
+            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", new MeterRow[0]));
 
-            Assert.False(group.CanCollapse);
+            Assert.False(group.HasBody);
         }
 
         [Fact]
@@ -72,9 +71,9 @@ namespace SysGadget.App.Tests
         public void GadgetViewModel_Update_ColoursTheCardsByPosition()
         {
             GadgetViewModel view = new GadgetViewModel();
-            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new MeterRow[0]);
-            GroupSection memory = new GroupSection(MeterCatalog.MemoryGroup, "Memory", false, new MeterRow[0]);
-            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", false, new MeterRow[0]);
+            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", new MeterRow[0]);
+            GroupSection memory = new GroupSection(MeterCatalog.MemoryGroup, "Memory", new MeterRow[0]);
+            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", new MeterRow[0]);
 
             view.Update(new[] { cpu, memory, gpu });
             Color gpuWhenLast = ((SolidColorBrush)view.Groups[2].AccentBrush).Color;
@@ -89,8 +88,8 @@ namespace SysGadget.App.Tests
         public void GadgetViewModel_Update_KeepsCardsWhenGroupsStayTheSame_AndRebuildsOnChange()
         {
             GadgetViewModel view = new GadgetViewModel();
-            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new MeterRow[0]);
-            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", false, new MeterRow[0]);
+            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", new MeterRow[0]);
+            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", new MeterRow[0]);
 
             view.Update(new[] { cpu, gpu });
             GroupViewModel first = view.Groups[0];
@@ -101,8 +100,6 @@ namespace SysGadget.App.Tests
             view.Update(new[] { gpu });
 
             Assert.Equal(MeterCatalog.GpuGroup, view.Groups.Single().Id);
-            Assert.NotNull(view.Find(MeterCatalog.GpuGroup));
-            Assert.Null(view.Find(MeterCatalog.CpuGroup));
         }
 
         [Fact]

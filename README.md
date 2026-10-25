@@ -24,7 +24,8 @@ dotnet test tests/SysGadget.App.Tests
 ## Use
 
 - Right-click the gadget or its tray icon: Settings, Always on top, Exit.
-- Click a group title to collapse or expand the group. Drag the floating window anywhere; its place is kept.
+- Drag the floating window by any part of it; its place is kept.
+- Thin bar (window or tray menu, or Settings): one line per group, showing the first visible item of each group. Order the items in the settings tree to choose which one.
 - Settings: dock edge (floating, left, right, top, bottom), monitor, width of a card (200 to 800), opacity, update interval, columns or stack for the floating window, reserve screen space when docked, compact core strip, and a tree of groups and items with checkboxes and Up/Down ordering.
 
 ## Layout
@@ -51,6 +52,7 @@ dotnet test tests/SysGadget.App.Tests
 - 2026-10-25 — Minimum width 200: label, a bar at its 36 px minimum and the value always fit on one line.
 - 2026-10-25 — Docking does not reserve the edge by default: Windows reserves an app bar's whole edge, which left half the strip empty; the overlay is only as tall as its cards.
 - 2026-10-25 — Default is a floating window with one column per group, centred at the top; the cards are coloured as a rainbow by position.
+- 2026-10-25 — No collapsing of groups: in columns a collapsed card stayed as an empty column; the thin bar replaces it.
 
 ---
 

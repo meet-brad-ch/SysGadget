@@ -31,23 +31,21 @@ namespace SysGadget.Core.Tests
             Assert.False(settings.ReserveSpace);
             Assert.Equal(DockEdge.Floating, settings.Edge);
             Assert.True(settings.Horizontal);
+            Assert.False(settings.ThinBar);
         }
 
         [Fact]
-        public void Visibility_AndCollapse_ChangeOnlyTheirTarget()
+        public void Visibility_ChangesOnlyItsTarget()
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
 
             settings.SetItemVisible(MeterCatalog.GpuLoad, false);
             settings.SetGroupVisible(MeterCatalog.MemoryGroup, false);
-            settings.SetCollapsed(MeterCatalog.CpuGroup, true);
 
             Assert.False(settings.IsItemVisible(MeterCatalog.GpuLoad));
             Assert.True(settings.IsItemVisible(MeterCatalog.GpuMemory));
             Assert.False(settings.IsGroupVisible(MeterCatalog.MemoryGroup));
             Assert.True(settings.IsItemVisible(MeterCatalog.Ram));
-            Assert.True(settings.IsCollapsed(MeterCatalog.CpuGroup));
-            Assert.False(settings.IsCollapsed(MeterCatalog.GpuGroup));
         }
 
         [Fact]
@@ -151,9 +149,9 @@ namespace SysGadget.Core.Tests
                 written.UseCompactCores = false;
                 written.ReserveSpace = true;
                 written.Horizontal = false;
+                written.ThinBar = true;
                 written.SetItemVisible(MeterCatalog.NetworkRates, true);
                 written.SetGroupVisible(MeterCatalog.GpuGroup, false);
-                written.SetCollapsed(MeterCatalog.CpuGroup, true);
                 written.MoveGroup(MeterCatalog.SystemGroup, -2);
                 written.MoveItem(MeterCatalog.CpuCores, -1);
                 new SettingsStore(file).Save(written);
@@ -171,9 +169,9 @@ namespace SysGadget.Core.Tests
                 Assert.False(read.UseCompactCores);
                 Assert.True(read.ReserveSpace);
                 Assert.False(read.Horizontal);
+                Assert.True(read.ThinBar);
                 Assert.True(read.IsItemVisible(MeterCatalog.NetworkRates));
                 Assert.False(read.IsGroupVisible(MeterCatalog.GpuGroup));
-                Assert.True(read.IsCollapsed(MeterCatalog.CpuGroup));
                 Assert.Equal(written.Groups.Select(g => g.Id), read.Groups.Select(g => g.Id));
                 Assert.Equal(MeterCatalog.CpuCores, read.Groups.Single(g => g.Id == MeterCatalog.CpuGroup).Items[0].Id);
             }

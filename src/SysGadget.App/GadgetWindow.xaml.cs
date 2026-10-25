@@ -35,8 +35,8 @@ namespace SysGadget.App
         /// <summary>Raised with the new state when the user toggles Always on top in the context menu.</summary>
         public event Action<bool>? TopmostToggled;
 
-        /// <summary>Raised with the group id when the user clicks a group header.</summary>
-        public event Action<string>? GroupHeaderClicked;
+        /// <summary>Raised with the new state when the user toggles Thin bar in the context menu.</summary>
+        public event Action<bool>? ThinToggled;
 
         /// <summary>Raised after the user dragged the window to a new place.</summary>
         public event Action? DragFinished;
@@ -63,19 +63,36 @@ namespace SysGadget.App
             TopmostItem.IsChecked = topmost;
         }
 
+        /// <summary>Shows the current thin bar state in the context menu.</summary>
+        /// <param name="thin">The state.</param>
+        public void ShowThinState(bool thin)
+        {
+            ThinItem.IsChecked = thin;
+        }
+
+        /// <summary>
+        /// A press anywhere drags a floating window. The position is saved only when the window
+        /// really moved, so a plain click does not pin a never-dragged window to its place.
+        /// </summary>
         private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (DragEnabled)
+            if (!DragEnabled)
             {
-                DragMove();
+                return;
+            }
+
+            double left = Left;
+            double top = Top;
+            DragMove();
+            if (Left != left || Top != top)
+            {
                 DragFinished?.Invoke();
             }
         }
 
-        private void OnGroupHeaderMouseDown(object sender, MouseButtonEventArgs e)
+        private void OnThinClick(object sender, RoutedEventArgs e)
         {
-            e.Handled = true; // a header click toggles the group and must not start a window drag
-            GroupHeaderClicked?.Invoke(((GroupViewModel)((FrameworkElement)sender).DataContext).Id);
+            ThinToggled?.Invoke(ThinItem.IsChecked);
         }
 
         private void OnSettingsClick(object sender, RoutedEventArgs e)

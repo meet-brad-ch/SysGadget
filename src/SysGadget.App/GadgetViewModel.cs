@@ -12,6 +12,14 @@ namespace SysGadget.App
         private string? status;
         private double sectionWidth = 224.0;
         private Orientation panelOrientation = Orientation.Vertical;
+        private bool thin;
+
+        /// <summary>Thin bar: each card is one line, title next to its first item.</summary>
+        public bool Thin
+        {
+            get => thin;
+            set => Set(ref thin, value);
+        }
 
         /// <summary>Columns side by side (horizontal) or cards stacked (vertical).</summary>
         public Orientation PanelOrientation
@@ -64,14 +72,6 @@ namespace SysGadget.App
             {
                 Groups[i].Update(sections[i]);
             }
-        }
-
-        /// <summary>Finds the view of a group.</summary>
-        /// <param name="groupId">The group id.</param>
-        /// <returns>The view, or null when the group is not shown.</returns>
-        public GroupViewModel? Find(string groupId)
-        {
-            return Groups.FirstOrDefault(g => g.Id == groupId);
         }
     }
 }

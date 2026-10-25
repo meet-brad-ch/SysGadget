@@ -66,6 +66,12 @@ namespace SysGadget.Core
         /// <summary>Use LibreHardwareMonitor for temperatures and power; asks for admin rights.</summary>
         public bool UseLibreHardwareMonitor { get; set; }
 
+        /// <summary>
+        /// Thin bar: each group shows only its first visible item, on one line with the group title.
+        /// The order of the items in a group decides which one that is.
+        /// </summary>
+        public bool ThinBar { get; set; }
+
         /// <summary>Show the cores as a compact strip of thin bars instead of one row per core.</summary>
         public bool UseCompactCores { get; set; } = true;
 
@@ -94,7 +100,6 @@ namespace SysGadget.Core
             {
                 Id = g.Id,
                 Visible = g.Visible,
-                Collapsed = g.Collapsed,
                 Items = g.Items.Select(i => new ItemSetting { Id = i.Id, Visible = i.Visible }).ToList(),
             }).ToList();
             return copy;
@@ -130,22 +135,6 @@ namespace SysGadget.Core
         public void SetItemVisible(string itemId, bool visible)
         {
             FindItem(itemId).Visible = visible;
-        }
-
-        /// <summary>Whether a group shows only its header.</summary>
-        /// <param name="groupId">The group id.</param>
-        /// <returns>True when collapsed.</returns>
-        public bool IsCollapsed(string groupId)
-        {
-            return FindGroup(groupId).Collapsed;
-        }
-
-        /// <summary>Collapses or expands a group.</summary>
-        /// <param name="groupId">The group id.</param>
-        /// <param name="collapsed">The new state.</param>
-        public void SetCollapsed(string groupId, bool collapsed)
-        {
-            FindGroup(groupId).Collapsed = collapsed;
         }
 
         /// <summary>Moves a group up or down; a move past either end is ignored.</summary>

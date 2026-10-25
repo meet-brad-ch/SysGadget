@@ -9,6 +9,7 @@ namespace SysGadget.App
     {
         private readonly NotifyIcon icon;
         private readonly ToolStripMenuItem topmostItem;
+        private readonly ToolStripMenuItem thinItem;
         private readonly Icon drawnIcon;
 
         /// <summary>Creates the icon.</summary>
@@ -17,10 +18,13 @@ namespace SysGadget.App
             drawnIcon = DrawIcon();
             topmostItem = new ToolStripMenuItem("Always on top") { CheckOnClick = true };
             topmostItem.Click += (sender, args) => TopmostToggled?.Invoke(topmostItem.Checked);
+            thinItem = new ToolStripMenuItem("Thin bar") { CheckOnClick = true };
+            thinItem.Click += (sender, args) => ThinToggled?.Invoke(thinItem.Checked);
 
             ContextMenuStrip menu = new ContextMenuStrip();
             menu.Items.Add("Settings...", null, (sender, args) => SettingsRequested?.Invoke());
             menu.Items.Add(topmostItem);
+            menu.Items.Add(thinItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Exit", null, (sender, args) => ExitRequested?.Invoke());
 
@@ -36,6 +40,16 @@ namespace SysGadget.App
 
         /// <summary>Raised with the new state when the user toggles Always on top.</summary>
         public event Action<bool>? TopmostToggled;
+
+        /// <summary>Raised with the new state when the user toggles Thin bar.</summary>
+        public event Action<bool>? ThinToggled;
+
+        /// <summary>Shows the current thin bar state in the menu.</summary>
+        /// <param name="thin">The state.</param>
+        public void ShowThinState(bool thin)
+        {
+            thinItem.Checked = thin;
+        }
 
         /// <summary>Shows the current Always on top state in the menu.</summary>
         /// <param name="topmost">The state.</param>
