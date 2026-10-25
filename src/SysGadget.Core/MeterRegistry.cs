@@ -138,7 +138,7 @@ namespace SysGadget.Core
             Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuMemory, (gpus, s) => MeterRowBuilder.GpuMemory(gpus));
             Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.GpuTemperature, (readings, s) => MeterRowBuilder.GpuTemperature(readings));
             Add<IReadOnlyList<DiskSample>>(MeterCatalog.Disks, (disks, s) => MeterRowBuilder.Disks(disks));
-            Add<IReadOnlyList<NetworkSample>>(MeterCatalog.NetworkRates, (network, s) => MeterRowBuilder.Network(network));
+            Add<IReadOnlyList<NetworkSample>>(MeterCatalog.NetworkRates, (network, s) => MeterRowBuilder.Network(network, s.NetworkMbit));
             Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.Temperatures, (readings, s) => MeterRowBuilder.Temperatures(readings));
             Add<SampleContext>(MeterCatalog.Time, (context, s) => MeterRowBuilder.Time(context.Now));
             Add<SampleContext>(MeterCatalog.Uptime, (context, s) => MeterRowBuilder.Uptime(context.Uptime));

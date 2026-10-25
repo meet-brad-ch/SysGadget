@@ -84,18 +84,23 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Network_ShowsDownAndUpOfTheBusiestAdapter_OnOneRow_WithoutBar()
+        public void Network_DownAndUpBars_AreTheShareOfTheBandwidth_FullAboveIt()
         {
+            // 500 Mbit/s = 62.5 MB/s; down at 25 MB/s (40 %), up at 100 MB/s (above the bandwidth)
             IReadOnlyList<MeterRow> rows = MeterRowBuilder.Network(new[]
             {
-                new NetworkSample("a", 2048, 1024),
+                new NetworkSample("a", 25000000, 100000000),
                 new NetworkSample("b", 10, 10),
-            });
+            }, 500);
 
-            MeterRow row = Assert.Single(rows);
-            Assert.Equal("↓ 2.0 KB/s   ↑ 1.0 KB/s", row.ValueText);
-            Assert.False(row.HasBar);
-            Assert.Empty(MeterRowBuilder.Network(new NetworkSample[0]));
+            Assert.Equal(2, rows.Count);
+            Assert.Equal("Down", rows[0].Label);
+            Assert.Equal(40.0, rows[0].Percent, 6);
+            Assert.Equal(ByteFormat.Rate(25000000), rows[0].ValueText);
+            Assert.True(rows[0].HasBar);
+            Assert.Equal("Up", rows[1].Label);
+            Assert.Equal(100.0, rows[1].Percent, 6);
+            Assert.Empty(MeterRowBuilder.Network(new NetworkSample[0], 500));
         }
 
         [Fact]

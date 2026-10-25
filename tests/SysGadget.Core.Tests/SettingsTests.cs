@@ -34,6 +34,7 @@ namespace SysGadget.Core.Tests
             Assert.Equal(DockEdge.Floating, settings.Edge);
             Assert.True(settings.Horizontal);
             Assert.False(settings.ThinBar);
+            Assert.Equal(500, settings.NetworkMbit);
         }
 
         [Fact]
@@ -148,6 +149,17 @@ namespace SysGadget.Core.Tests
             Assert.Throws<InvalidDataException>(() => settings.Validate());
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(100001)]
+        public void Validate_BandwidthOutOfRange_Throws(int mbit)
+        {
+            GadgetSettings settings = GadgetSettings.CreateDefault();
+            settings.NetworkMbit = mbit;
+
+            Assert.Throws<InvalidDataException>(() => settings.Validate());
+        }
+
         [Fact]
         public void Validate_UnknownRepeatedOrMisplacedIds_Throw()
         {
@@ -212,6 +224,7 @@ namespace SysGadget.Core.Tests
                 written.ReserveSpace = true;
                 written.Horizontal = false;
                 written.ThinBar = true;
+                written.NetworkMbit = 1000;
                 written.SetItemVisible(MeterCatalog.NetworkRates, true);
                 written.SetGroupVisible(MeterCatalog.GpuGroup, false);
                 written.PlaceGroup(MeterCatalog.SystemGroup, MeterCatalog.NetworkGroup, false);
@@ -232,6 +245,7 @@ namespace SysGadget.Core.Tests
                 Assert.True(read.ReserveSpace);
                 Assert.False(read.Horizontal);
                 Assert.True(read.ThinBar);
+                Assert.Equal(1000, read.NetworkMbit);
                 Assert.True(read.IsItemVisible(MeterCatalog.NetworkRates));
                 Assert.False(read.IsGroupVisible(MeterCatalog.GpuGroup));
                 Assert.Equal(written.Groups.Select(g => g.Id), read.Groups.Select(g => g.Id));

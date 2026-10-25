@@ -210,13 +210,49 @@ namespace SysGadget.App
 
         private void OnApply(object sender, RoutedEventArgs e)
         {
-            apply(working.Clone());
+            TryApply();
         }
 
         private void OnOk(object sender, RoutedEventArgs e)
         {
+            if (TryApply())
+            {
+                Close();
+            }
+        }
+
+        /// <summary>Applies a copy when every value is valid; otherwise says what is wrong and applies nothing.</summary>
+        /// <returns>True when applied.</returns>
+        private bool TryApply()
+        {
+            string? problem = Problem();
+            if (problem != null)
+            {
+                MessageBox.Show(this, problem, "SysGadget settings", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
             apply(working.Clone());
-            Close();
+            return true;
+        }
+
+        /// <summary>What is wrong with the edited values, or null.</summary>
+        internal string? Problem()
+        {
+            if (Validation.GetHasError(BandwidthBox))
+            {
+                return "Bandwidth must be a whole number of Mbit/s, 1 to " + GadgetSettings.MaxNetworkMbit + ".";
+            }
+
+            try
+            {
+                working.Clone().Validate();
+                return null;
+            }
+            catch (System.IO.InvalidDataException error)
+            {
+                return error.Message;
+            }
         }
 
         private void OnCancel(object sender, RoutedEventArgs e)

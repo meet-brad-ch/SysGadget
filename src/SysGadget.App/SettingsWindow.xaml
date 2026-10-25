@@ -87,9 +87,17 @@
                 <ColumnDefinition Width="120" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="30" />
+                <RowDefinition Height="30" />
+            </Grid.RowDefinitions>
             <TextBlock Text="Update every" />
             <ComboBox Grid.Column="1" x:Name="IntervalBox" Height="24"
                       SelectedItem="{Binding IntervalMs}" ItemStringFormat="{}{0} ms" />
+            <TextBlock Grid.Row="1" Text="Bandwidth (Mbit/s)" />
+            <TextBox Grid.Row="1" Grid.Column="1" x:Name="BandwidthBox" Height="24" VerticalContentAlignment="Center"
+                     Text="{Binding NetworkMbit, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="Speed of the internet connection: a full Down or Up bar" />
         </Grid>
         <CheckBox Margin="0,6,0,0" IsChecked="{Binding UseCompactCores}" Content="Show the cores as vertical bars" />
         <CheckBox Margin="0,4,0,0" IsChecked="{Binding UseLibreHardwareMonitor}"

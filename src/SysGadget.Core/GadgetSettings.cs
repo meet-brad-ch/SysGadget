@@ -23,6 +23,15 @@ namespace SysGadget.Core
         /// <summary>Smallest allowed opacity.</summary>
         public const double MinOpacity = 0.2;
 
+        /// <summary>Largest allowed network bandwidth in Mbit/s.</summary>
+        public const int MaxNetworkMbit = 100000;
+
+        /// <summary>
+        /// Bandwidth of the internet connection in Mbit/s: a full Down or Up bar. Faster moments
+        /// keep the bar full.
+        /// </summary>
+        public int NetworkMbit { get; set; } = 500;
+
         /// <summary>Edge to dock to.</summary>
         public DockEdge Edge { get; set; } = DockEdge.Floating;
 
@@ -205,6 +214,7 @@ namespace SysGadget.Core
                 "IntervalMs must be " + MinIntervalMs + " to " + MaxIntervalMs + ".");
             Require(Opacity >= MinOpacity && Opacity <= 1.0, "Opacity must be " + MinOpacity + " to 1.");
             Require(MonitorIndex >= 0, "MonitorIndex must not be negative.");
+            Require(NetworkMbit >= 1 && NetworkMbit <= MaxNetworkMbit, "Network bandwidth must be 1 to " + MaxNetworkMbit + " Mbit/s.");
             DropSingleInstanceEntries();
             ValidateGroups();
             AddMissing();

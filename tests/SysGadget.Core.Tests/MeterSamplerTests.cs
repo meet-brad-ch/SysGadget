@@ -165,7 +165,7 @@ namespace SysGadget.Core.Tests
                 Assert.Equal("Total", sections.Single(s => s.Id == MeterCatalog.CpuGroup).Rows.Single().Label);
                 Assert.Equal("Commit", sections.Single(s => s.Id == MeterCatalog.MemoryGroup).Rows.Single().Label);
                 Assert.Equal("Uptime", sections.Single(s => s.Id == MeterCatalog.SystemGroup).Rows.Single().Label);
-                Assert.StartsWith("↓", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().ValueText);
+                Assert.Equal("Down", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().Label);
                 Assert.True(sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single().HasBar);
 
                 settings.UseCompactCores = true;

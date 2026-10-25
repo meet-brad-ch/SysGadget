@@ -137,8 +137,9 @@ namespace SysGadget.Core
 
         /// <summary>Throughput of the busiest adapter.</summary>
         /// <param name="samples">The network samples, busiest first.</param>
-        /// <returns>One row without a bar, "↓ down  ↑ up"; none when there is no adapter.</returns>
-        public static IReadOnlyList<MeterRow> Network(IReadOnlyList<NetworkSample> samples)
+        /// <param name="bandwidthMbit">The connection bandwidth in Mbit/s: a full bar.</param>
+        /// <returns>"Down" and "Up" rows whose bars show the share of the bandwidth, full above it; none without an adapter.</returns>
+        public static IReadOnlyList<MeterRow> Network(IReadOnlyList<NetworkSample> samples, int bandwidthMbit)
         {
             if (samples.Count == 0)
             {
@@ -147,12 +148,15 @@ namespace SysGadget.Core
 
             return new[]
             {
-                new MeterRow(
-                    string.Empty,
-                    "↓ " + ByteFormat.Rate(samples[0].ReceivedBytesPerSecond) + "   ↑ " + ByteFormat.Rate(samples[0].SentBytesPerSecond),
-                    0.0,
-                    false),
+                RateRow("Down", samples[0].ReceivedBytesPerSecond, bandwidthMbit),
+                RateRow("Up", samples[0].SentBytesPerSecond, bandwidthMbit),
             };
+        }
+
+        private static MeterRow RateRow(string label, double bytesPerSecond, int bandwidthMbit)
+        {
+            double percent = Math.Min(100.0, bytesPerSecond * 8.0 / (bandwidthMbit * 1000000.0) * 100.0);
+            return new MeterRow(label, ByteFormat.Rate(bytesPerSecond), percent, true);
         }
 
         /// <summary>Busy time per disk, with the rates on a second line.</summary>

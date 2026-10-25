@@ -110,6 +110,32 @@ namespace SysGadget.App.Tests
             });
         }
 
+        [Theory]
+        [InlineData("abc", true)]
+        [InlineData("0", true)]
+        [InlineData("1000", false)]
+        public void Bandwidth_InvalidInput_IsReported_ValidInputIsTaken(string typed, bool invalid)
+        {
+            StaRunner.Run(() =>
+            {
+                List<GadgetSettings> applied = new List<GadgetSettings>();
+                SettingsWindow window = Open(GadgetSettings.CreateDefault(), applied);
+
+                window.BandwidthBox.Text = typed;
+
+                Assert.Equal(invalid, window.Problem() != null);
+                if (!invalid)
+                {
+                    Click(Descendants<Button>(window).Single(b => (string)b.Content == "OK"));
+                    Assert.Equal(1000, applied.Single().NetworkMbit);
+                }
+                else
+                {
+                    window.Close();
+                }
+            });
+        }
+
         [Fact]
         public void TakeSwitches_ShowsTheGadgetsThinAndTopmostState()
         {
