@@ -5,14 +5,14 @@ using SysGadget.Core;
 
 namespace SysGadget.App
 {
-    /// <summary>What the gadget window shows: the visible sections and an error line.</summary>
+    /// <summary>What the gadget window shows: the visible groups and an error line.</summary>
     internal sealed class GadgetViewModel : ObservableObject
     {
         private string? status;
-        private double sectionWidth = 204.0;
+        private double sectionWidth = 224.0;
 
-        /// <summary>The visible meters in display order.</summary>
-        public ObservableCollection<SectionViewModel> Sections { get; } = new ObservableCollection<SectionViewModel>();
+        /// <summary>The visible groups in display order.</summary>
+        public ObservableCollection<GroupViewModel> Groups { get; } = new ObservableCollection<GroupViewModel>();
 
         /// <summary>A visible error, or null when all is well.</summary>
         public string? Status
@@ -29,8 +29,8 @@ namespace SysGadget.App
         public bool HasStatus => status != null;
 
         /// <summary>
-        /// Width of one section. The sections wrap, so they stack in a narrow window (left or
-        /// right docking) and sit side by side in a wide one (top or bottom docking).
+        /// Width of one card. The cards wrap, so they stack in a narrow window (left or right
+        /// docking) and sit side by side in a wide one (top or bottom docking).
         /// </summary>
         public double SectionWidth
         {
@@ -38,23 +38,31 @@ namespace SysGadget.App
             set => Set(ref sectionWidth, value);
         }
 
-        /// <summary>Shows a new sample.</summary>
-        /// <param name="sections">The sections to show.</param>
-        public void Update(IReadOnlyList<MeterSection> sections)
+        /// <summary>Shows a new sample; the cards are rebuilt only when the set or order of groups changes.</summary>
+        /// <param name="sections">The sampled groups.</param>
+        public void Update(IReadOnlyList<GroupSection> sections)
         {
-            if (!Sections.Select(s => s.Id).SequenceEqual(sections.Select(s => s.Id)))
+            if (!Groups.Select(g => g.Id).SequenceEqual(sections.Select(s => s.Id)))
             {
-                Sections.Clear();
-                foreach (MeterSection section in sections)
+                Groups.Clear();
+                foreach (GroupSection section in sections)
                 {
-                    Sections.Add(new SectionViewModel(section.Id, section.Title));
+                    Groups.Add(new GroupViewModel(section.Id, section.Title));
                 }
             }
 
             for (int i = 0; i < sections.Count; i++)
             {
-                Sections[i].Update(sections[i].Rows);
+                Groups[i].Update(sections[i]);
             }
+        }
+
+        /// <summary>Finds the view of a group.</summary>
+        /// <param name="groupId">The group id.</param>
+        /// <returns>The view, or null when the group is not shown.</returns>
+        public GroupViewModel? Find(string groupId)
+        {
+            return Groups.FirstOrDefault(g => g.Id == groupId);
         }
     }
 }

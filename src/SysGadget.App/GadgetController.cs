@@ -48,6 +48,7 @@ namespace SysGadget.App
             window.TopmostToggled += SetTopmost;
             tray.TopmostToggled += SetTopmost;
             window.DragFinished += SaveFloatingPosition;
+            window.GroupHeaderClicked += ToggleCollapsed;
             timer.Tick += OnTick;
         }
 
@@ -75,7 +76,8 @@ namespace SysGadget.App
 
         private static MeterSampler CreateSampler()
         {
-            return new MeterSampler(Elevation.IsAdministrator() ? (Func<ITemperatureSource>)Elevation.OpenTemperatureSource : null);
+            Func<ITemperatureSource>? temperatures = Elevation.IsAdministrator() ? Elevation.OpenTemperatureSource : null;
+            return new MeterSampler(new MeterRegistry(temperatures));
         }
 
         private void ApplySettings(GadgetSettings next)
@@ -169,8 +171,8 @@ namespace SysGadget.App
             {
                 GadgetSettings snapshot = settings;
                 MeterSampler active = sampler;
-                System.Collections.Generic.IReadOnlyList<MeterSection> sections = await Task.Run(
-                    () => active.Sample(snapshot, DateTime.Now, TimeSpan.FromMilliseconds(Environment.TickCount64)));
+                System.Collections.Generic.IReadOnlyList<GroupSection> sections = await Task.Run(
+                    () => active.Sample(snapshot, new SampleContext(DateTime.Now, TimeSpan.FromMilliseconds(Environment.TickCount64))));
                 if (!ReferenceEquals(active, sampler))
                 {
                     return; // the settings changed while sampling; the next tick uses the new sampler
@@ -215,6 +217,19 @@ namespace SysGadget.App
             GadgetSettings next = settings.Clone();
             next.AlwaysOnTop = topmost;
             ApplySettings(next);
+        }
+
+        private void ToggleCollapsed(string groupId)
+        {
+            GadgetSettings next = settings.Clone();
+            next.SetCollapsed(groupId, !next.IsCollapsed(groupId));
+            settings = next;
+            store.Save(settings);
+            viewModel.Find(groupId)!.IsCollapsed = settings.IsCollapsed(groupId); // show it now, not at the next tick
+            if (settings.Edge == DockEdge.Top || settings.Edge == DockEdge.Bottom)
+            {
+                ApplyLayout();
+            }
         }
 
         private void SaveFloatingPosition()

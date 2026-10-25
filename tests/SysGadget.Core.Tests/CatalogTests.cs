@@ -1,0 +1,40 @@
+using System.Collections.Generic;
+using System.Linq;
+using SysGadget.Core;
+using Xunit;
+
+namespace SysGadget.Core.Tests
+{
+    public class CatalogTests
+    {
+        [Fact]
+        public void Ids_AreUnique_AcrossGroupsAndItems()
+        {
+            List<string> ids = MeterCatalog.Groups.Select(g => g.Id)
+                .Concat(MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id))
+                .ToList();
+
+            Assert.Equal(ids.Count, ids.Distinct().Count());
+        }
+
+        [Fact]
+        public void ItemSources_AreKnownSourceIds()
+        {
+            foreach (ItemDefinition item in MeterCatalog.Groups.SelectMany(g => g.Items))
+            {
+                Assert.Contains(item.SourceId, MeterCatalog.Sources.All);
+            }
+        }
+
+        [Fact]
+        public void Lookups_FindEntries_AndThrowOnUnknownIds()
+        {
+            Assert.Equal("Per core", MeterCatalog.GetItem(MeterCatalog.CpuCores).Title);
+            Assert.Equal(MeterCatalog.MemoryGroup, MeterCatalog.GroupOf(MeterCatalog.Commit).Id);
+            Assert.Equal("GPU", MeterCatalog.GetGroup(MeterCatalog.GpuGroup).Title);
+            Assert.Throws<KeyNotFoundException>(() => MeterCatalog.GetItem("nope"));
+            Assert.Throws<KeyNotFoundException>(() => MeterCatalog.GroupOf("nope"));
+            Assert.Throws<KeyNotFoundException>(() => MeterCatalog.GetGroup("nope"));
+        }
+    }
+}

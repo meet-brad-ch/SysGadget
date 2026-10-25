@@ -49,6 +49,9 @@ namespace SysGadget.App
             private set => Set(ref level, value);
         }
 
+        /// <summary>"Label: value", shown as the tooltip of a strip cell.</summary>
+        public string ToolTip => label + ": " + valueText;
+
         /// <summary>Copies a row into this view-model.</summary>
         /// <param name="row">The row to show.</param>
         public void Update(MeterRow row)
@@ -58,6 +61,7 @@ namespace SysGadget.App
             Percent = row.Percent;
             HasBar = row.HasBar;
             Level = !row.HasBar ? 0 : row.Percent >= CriticalPercent ? 2 : row.Percent >= WarnPercent ? 1 : 0;
+            Raise(nameof(ToolTip));
         }
     }
 }

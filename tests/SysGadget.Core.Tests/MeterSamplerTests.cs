@@ -9,6 +9,8 @@ namespace SysGadget.Core.Tests
 {
     public class MeterSamplerTests
     {
+        private static readonly SampleContext Context = new SampleContext(new DateTime(2026, 10, 25, 9, 0, 0), TimeSpan.FromMinutes(5));
+
         private sealed class FakeTemperatures : ITemperatureSource
         {
             public int Disposed { get; private set; }
@@ -24,71 +26,96 @@ namespace SysGadget.Core.Tests
             }
         }
 
-        private static GadgetSettings OnlyVisible(params string[] ids)
+        private static GadgetSettings OnlyItems(params string[] itemIds)
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
-            foreach (MeterSetting meter in settings.Meters)
+            foreach (ItemSetting item in settings.Groups.SelectMany(g => g.Items))
             {
-                meter.Visible = ids.Contains(meter.Id);
+                item.Visible = itemIds.Contains(item.Id);
             }
 
             return settings;
         }
 
         [Fact]
-        public void Sample_DefaultSettings_GivesVisibleMetersInOrder_WithRows()
+        public void Sample_Defaults_GivesCpuMemoryGpu_InOrder_TotalAsTheFirstCpuRow()
         {
-            using (MeterSampler sampler = new MeterSampler(null))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
             {
                 GadgetSettings settings = GadgetSettings.CreateDefault();
-                sampler.Sample(settings, DateTime.Now, TimeSpan.Zero);
+                sampler.Sample(settings, Context);
                 Thread.Sleep(1000);
 
-                IReadOnlyList<MeterSection> sections = sampler.Sample(settings, DateTime.Now, TimeSpan.Zero);
+                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
 
-                Assert.Equal(
-                    settings.Meters.Where(m => m.Visible).Select(m => m.Id),
-                    sections.Select(s => s.Id));
-                Assert.All(sections, s => Assert.NotEmpty(s.Rows));
+                Assert.Equal(new[] { MeterCatalog.CpuGroup, MeterCatalog.MemoryGroup, MeterCatalog.GpuGroup }, sections.Select(s => s.Id));
+                GroupSection cpu = sections[0];
+                Assert.Equal("CPU", cpu.Title);
+                Assert.Equal("Total", cpu.Rows[0].Label);
+                Assert.Equal("Core 0", cpu.Rows[1].Label);
+                Assert.Equal(Environment.ProcessorCount + 1, cpu.Rows.Count);
+                Assert.Equal("RAM", sections[1].Rows.Single().Label);
+                Assert.Equal(new[] { "Load", "VRAM" }, sections[2].Rows.Select(r => r.Label).Take(2));
             }
         }
 
         [Fact]
-        public void Sample_AllMetersVisible_EveryMeterHasRows()
+        public void Sample_EveryItemVisible_EveryGroupHasRows()
         {
-            using (MeterSampler sampler = new MeterSampler(null))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
             {
-                GadgetSettings settings = GadgetSettings.CreateDefault();
-                foreach (MeterSetting meter in settings.Meters)
-                {
-                    meter.Visible = true;
-                }
-
-                sampler.Sample(settings, DateTime.Now, TimeSpan.FromMinutes(5));
+                GadgetSettings settings = OnlyItems(MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id).ToArray());
+                sampler.Sample(settings, Context);
                 Thread.Sleep(1000);
 
-                IReadOnlyList<MeterSection> sections = sampler.Sample(settings, DateTime.Now, TimeSpan.FromMinutes(5));
+                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
 
-                Assert.Equal(MeterCatalog.All.Count, sections.Count);
-                Assert.All(sections, s => Assert.NotEmpty(s.Rows));
+                Assert.Equal(MeterCatalog.Groups.Count, sections.Count);
+                Assert.All(sections, s => Assert.True(s.Rows.Count > 0, s.Id));
             }
         }
 
         [Fact]
-        public void Sample_TemperaturesWithoutSource_ShowsTheReason()
+        public void Sample_HiddenGroup_AndGroupWithoutVisibleItems_AreLeftOut()
         {
-            using (MeterSampler sampler = new MeterSampler(null))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
             {
-                GadgetSettings settings = OnlyVisible(MeterCatalog.Temperatures);
+                GadgetSettings settings = OnlyItems(MeterCatalog.Time, MeterCatalog.Ram);
+                settings.SetGroupVisible(MeterCatalog.MemoryGroup, false);
 
-                MeterSection section = sampler.Sample(settings, DateTime.Now, TimeSpan.Zero).Single();
+                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
 
-                Assert.Equal("turn on LibreHardwareMonitor in settings", section.Rows[0].ValueText);
+                Assert.Equal(new[] { MeterCatalog.SystemGroup }, sections.Select(s => s.Id));
+            }
+        }
 
-                settings.UseLibreHardwareMonitor = true;
-                section = sampler.Sample(settings, DateTime.Now, TimeSpan.Zero).Single();
+        [Fact]
+        public void Sample_PassesCollapsedState_AndCompactCoreRows()
+        {
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            {
+                GadgetSettings settings = OnlyItems(MeterCatalog.CpuCores);
+                settings.SetCollapsed(MeterCatalog.CpuGroup, true);
+                settings.UseCompactCores = true;
 
-                Assert.Equal("needs administrator rights", section.Rows[0].ValueText);
+                GroupSection cpu = sampler.Sample(settings, Context).Single();
+
+                Assert.True(cpu.Collapsed);
+                Assert.All(cpu.Rows, r => Assert.True(r.Compact));
+            }
+        }
+
+        [Fact]
+        public void Sample_TemperaturesWithoutSource_ShowTheReasonRow()
+        {
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            {
+                GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
+
+                MeterRow row = sampler.Sample(settings, Context).Single().Rows.Single();
+
+                Assert.Equal("Turn on in Settings", row.ValueText);
+                Assert.False(row.HasBar);
             }
         }
 
@@ -97,21 +124,21 @@ namespace SysGadget.Core.Tests
         {
             int created = 0;
             FakeTemperatures fake = new FakeTemperatures();
-            using (MeterSampler sampler = new MeterSampler(() => { created++; return fake; }))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(() => { created++; return fake; })))
             {
-                GadgetSettings settings = OnlyVisible(MeterCatalog.Temperatures);
+                GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
                 settings.UseLibreHardwareMonitor = true;
 
-                sampler.Sample(settings, DateTime.Now, TimeSpan.Zero);
-                MeterSection section = sampler.Sample(settings, DateTime.Now, TimeSpan.Zero).Single();
+                sampler.Sample(settings, Context);
+                MeterRow row = sampler.Sample(settings, Context).Single().Rows.Single();
 
                 Assert.Equal(1, created);
-                Assert.Equal("55 °C", section.Rows[0].ValueText);
+                Assert.Equal("55 °C", row.ValueText);
                 Assert.Equal(0, fake.Disposed);
 
-                settings.SetVisible(MeterCatalog.Temperatures, false);
-                settings.SetVisible(MeterCatalog.Clock, true);
-                sampler.Sample(settings, DateTime.Now, TimeSpan.Zero);
+                settings.SetItemVisible(MeterCatalog.Temperatures, false);
+                settings.SetItemVisible(MeterCatalog.Time, true);
+                sampler.Sample(settings, Context);
 
                 Assert.Equal(1, fake.Disposed);
             }

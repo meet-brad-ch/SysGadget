@@ -27,6 +27,20 @@ namespace SysGadget.Core
             return number + " " + Units[unit];
         }
 
+        /// <summary>Formats "used / total" and names the unit once when both share it, for example "41 / 128 GB".</summary>
+        /// <param name="usedBytes">The used amount.</param>
+        /// <param name="totalBytes">The total amount.</param>
+        /// <returns>The text.</returns>
+        public static string Pair(double usedBytes, double totalBytes)
+        {
+            string used = Size(usedBytes);
+            string total = Size(totalBytes);
+            string usedUnit = used.Substring(used.LastIndexOf(' ') + 1);
+            string totalUnit = total.Substring(total.LastIndexOf(' ') + 1);
+            string first = usedUnit == totalUnit ? used.Substring(0, used.LastIndexOf(' ')) : used;
+            return first + " / " + total;
+        }
+
         /// <summary>Formats a rate, for example "1.2 MB/s".</summary>
         /// <param name="bytesPerSecond">The rate.</param>
         /// <returns>The text.</returns>

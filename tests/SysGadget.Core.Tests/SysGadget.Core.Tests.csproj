@@ -10,12 +10,14 @@
 
   <ItemGroup>
     <Compile Include="ActivityProviderTests.cs" />
+    <Compile Include="CatalogTests.cs" />
     <Compile Include="CpuCounterProviderTests.cs" />
     <Compile Include="CrashLogTests.cs" />
     <Compile Include="GpuTests.cs" />
     <Compile Include="MemoryProviderTests.cs" />
     <Compile Include="MeterSamplerTests.cs" />
     <Compile Include="ProcessorInstanceNameTests.cs" />
+    <Compile Include="RegistryTests.cs" />
     <Compile Include="RowBuilderTests.cs" />
     <Compile Include="SettingsTests.cs" />
   </ItemGroup>

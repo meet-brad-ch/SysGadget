@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using SysGadget.Core;
 
@@ -9,6 +11,7 @@ namespace SysGadget.App
     {
         private readonly GadgetSettings working;
         private readonly Action<GadgetSettings> apply;
+        private List<SettingsTreeNode> tree = new List<SettingsTreeNode>();
 
         /// <summary>Creates the window.</summary>
         /// <param name="current">The settings now in force; they are copied, not edited.</param>
@@ -23,6 +26,13 @@ namespace SysGadget.App
             MonitorBox.ItemsSource = monitorNames;
             IntervalBox.ItemsSource = new[] { 250, 500, 1000, 2000, 5000 };
             DataContext = working;
+            RebuildTree(null);
+        }
+
+        private void RebuildTree(string? selectedId)
+        {
+            tree = SettingsTreeNode.Build(working, SettingsTreeNode.ClosedGroups(tree), selectedId);
+            MeterTree.ItemsSource = tree;
         }
 
         private void OnMoveUp(object sender, RoutedEventArgs e)
@@ -37,12 +47,21 @@ namespace SysGadget.App
 
         private void MoveSelected(int delta)
         {
-            if (MeterList.SelectedItem is MeterSetting selected)
+            if (!(MeterTree.SelectedItem is SettingsTreeNode selected))
             {
-                working.Move(selected.Id, delta);
-                MeterList.Items.Refresh();
-                MeterList.SelectedItem = selected;
+                return;
             }
+
+            if (selected.IsGroup)
+            {
+                working.MoveGroup(selected.Id, delta);
+            }
+            else
+            {
+                working.MoveItem(selected.Id, delta);
+            }
+
+            RebuildTree(selected.Id);
         }
 
         private void OnApply(object sender, RoutedEventArgs e)

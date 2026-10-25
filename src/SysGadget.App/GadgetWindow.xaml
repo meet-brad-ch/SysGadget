@@ -9,25 +9,48 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         SizeToContent="Height"
-        Width="220"
+        Width="240"
         MouseLeftButtonDown="OnMouseLeftButtonDown">
     <Window.Resources>
-        <SolidColorBrush x:Key="PanelBrush" Color="#F01B1D23" />
+        <SolidColorBrush x:Key="PanelBrush" Color="#F00E1014" />
+        <SolidColorBrush x:Key="CardBrush" Color="#FF1C1F27" />
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#FF2A2E39" />
+        <SolidColorBrush x:Key="DividerBrush" Color="#FF303544" />
+        <SolidColorBrush x:Key="TitleBrush" Color="#FF7FB2FF" />
         <SolidColorBrush x:Key="TextBrush" Color="#E6E8EE" />
         <SolidColorBrush x:Key="DimBrush" Color="#9AA0AE" />
         <SolidColorBrush x:Key="TrackBrush" Color="#2D313B" />
         <SolidColorBrush x:Key="BarBrush" Color="#4DA3FF" />
         <SolidColorBrush x:Key="WarnBrush" Color="#F2B84B" />
         <SolidColorBrush x:Key="CriticalBrush" Color="#F0605D" />
+        <BooleanToVisibilityConverter x:Key="Visible" />
 
+        <!-- A bar: rounded, coloured by level, hidden for rows without a bar. It never shrinks below MinWidth. -->
         <Style x:Key="BarStyle" TargetType="ProgressBar">
-            <Setter Property="Height" Value="4" />
+            <Setter Property="Height" Value="6" />
+            <Setter Property="MinWidth" Value="36" />
+            <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Minimum" Value="0" />
             <Setter Property="Maximum" Value="100" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Background" Value="{StaticResource TrackBrush}" />
             <Setter Property="Foreground" Value="{StaticResource BarBrush}" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="3" />
+                            <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="3"
+                                    HorizontalAlignment="Left" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
+                <DataTrigger Binding="{Binding HasBar}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
                 <DataTrigger Binding="{Binding Level}" Value="1">
                     <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
                 </DataTrigger>
@@ -37,37 +60,115 @@
             </Style.Triggers>
         </Style>
 
+        <!-- A strip cell: the same bar turned upright, filling from the bottom. -->
+        <Style x:Key="StripCellStyle" TargetType="ProgressBar" BasedOn="{StaticResource BarStyle}">
+            <Setter Property="Height" Value="Auto" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Margin" Value="1,0" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="ToolTip" Value="{Binding ToolTip}" />
+            <Setter Property="LayoutTransform">
+                <Setter.Value>
+                    <RotateTransform Angle="-90" />
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Value text of a row that has a bar: sits right of the bar. -->
+        <Style x:Key="BarValueStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasBar}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Value text of a row without a bar: takes the room of the bar and the value column. -->
+        <Style x:Key="PlainValueStyle" TargetType="TextBlock" BasedOn="{StaticResource BarValueStyle}">
+            <Setter Property="Visibility" Value="Visible" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="Margin" Value="7,0,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasBar}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- One line: label, bar (takes the room that is left, never below its MinWidth), value. -->
         <DataTemplate x:Key="RowTemplate">
-            <StackPanel Margin="0,0,0,5">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Label}" Foreground="{StaticResource DimBrush}" FontSize="11"
-                               TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
-                    <TextBlock Grid.Column="1" Text="{Binding ValueText}" Foreground="{StaticResource TextBrush}"
-                               FontSize="11" />
-                </Grid>
-                <ProgressBar Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource BarStyle}" Margin="0,2,0,0">
-                    <ProgressBar.Visibility>
-                        <Binding Path="HasBar">
-                            <Binding.Converter>
-                                <BooleanToVisibilityConverter />
-                            </Binding.Converter>
-                        </Binding>
-                    </ProgressBar.Visibility>
-                </ProgressBar>
-            </StackPanel>
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="Label" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="Value" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Label}" Foreground="{StaticResource DimBrush}" FontSize="11"
+                           TextTrimming="CharacterEllipsis" MaxWidth="64" VerticalAlignment="Center" />
+                <ProgressBar Grid.Column="1" Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource BarStyle}"
+                             Margin="7,0" />
+                <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource BarValueStyle}" />
+                <TextBlock Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding ValueText}"
+                           Style="{StaticResource PlainValueStyle}" />
+            </Grid>
         </DataTemplate>
 
-        <DataTemplate x:Key="SectionTemplate">
-            <StackPanel Width="{Binding DataContext.SectionWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Margin="0,0,0,6">
-                <TextBlock Text="{Binding Title}" Foreground="{StaticResource DimBrush}" FontSize="10"
-                           FontWeight="SemiBold" Margin="0,0,0,3" />
-                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource RowTemplate}" />
-            </StackPanel>
+        <!-- Each group is a card: header (title, collapse arrow), divider, body. -->
+        <DataTemplate x:Key="GroupTemplate">
+            <Border Width="{Binding DataContext.SectionWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                    Margin="0,0,8,8" Padding="9,6,9,6" CornerRadius="6"
+                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                    BorderThickness="1">
+                <StackPanel>
+                    <Grid Background="Transparent" Cursor="Hand" MouseLeftButtonDown="OnGroupHeaderMouseDown"
+                          ToolTip="Click to collapse or expand">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource TitleBrush}" FontSize="11.5"
+                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Foreground="{StaticResource DimBrush}" FontSize="10"
+                                   Visibility="{Binding CanCollapse, Converter={StaticResource Visible}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="&#x25BE;" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCollapsed}" Value="True">
+                                            <Setter Property="Text" Value="&#x25B8;" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <Rectangle Height="1" Fill="{StaticResource DividerBrush}" Margin="0,6,0,6"
+                               Visibility="{Binding ShowBody, Converter={StaticResource Visible}}" />
+                    <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource RowTemplate}"
+                                  Grid.IsSharedSizeScope="True"
+                                  Visibility="{Binding ShowRows, Converter={StaticResource Visible}}" />
+                    <ItemsControl ItemsSource="{Binding CompactRows}" Height="30" Margin="0,0,0,4"
+                                  Visibility="{Binding ShowStrip, Converter={StaticResource Visible}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ProgressBar Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource StripCellStyle}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </DataTemplate>
     </Window.Resources>
 
@@ -80,19 +181,12 @@
         </ContextMenu>
     </Window.ContextMenu>
 
-    <Border Background="{StaticResource PanelBrush}" CornerRadius="6" Padding="8,8,8,2">
+    <Border Background="{StaticResource PanelBrush}" CornerRadius="6" Padding="8,8,0,0">
         <StackPanel>
             <TextBlock Text="{Binding Status}" Foreground="{StaticResource CriticalBrush}" FontSize="11"
-                       TextWrapping="Wrap" Margin="0,0,0,6">
-                <TextBlock.Visibility>
-                    <Binding Path="HasStatus">
-                        <Binding.Converter>
-                            <BooleanToVisibilityConverter />
-                        </Binding.Converter>
-                    </Binding>
-                </TextBlock.Visibility>
-            </TextBlock>
-            <ItemsControl ItemsSource="{Binding Sections}" ItemTemplate="{StaticResource SectionTemplate}">
+                       TextWrapping="Wrap" Margin="0,0,8,6"
+                       Visibility="{Binding HasStatus, Converter={StaticResource Visible}}" />
+            <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupTemplate}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal" />

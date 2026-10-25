@@ -1,138 +1,90 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SysGadget.Core
 {
     /// <summary>
-    /// Samples the visible meters. A provider is opened when the first meter that needs it
-    /// becomes visible and released when the last one is hidden, so a hidden meter costs nothing.
+    /// Samples what the settings make visible, driven by <see cref="MeterCatalog"/> and
+    /// <see cref="MeterRegistry"/>. A source is opened when the first visible item needs it and
+    /// released when none does, so hidden items cost nothing. Each source is read once per sample.
     /// </summary>
     public sealed class MeterSampler : IDisposable
     {
-        private readonly Func<ITemperatureSource>? temperatureFactory;
-        private readonly MemoryProvider memory = new MemoryProvider();
-        private CpuCounterProvider? cpu;
-        private GpuCounterProvider? gpu;
-        private NetworkProvider? network;
-        private DiskProvider? disks;
-        private ITemperatureSource? temperatures;
+        private readonly MeterRegistry registry;
+        private readonly Dictionary<string, SampleSource> open = new Dictionary<string, SampleSource>();
 
         /// <summary>Creates a sampler.</summary>
-        /// <param name="temperatureFactory">
-        /// Opens the temperature source, or null when none is available (no admin rights or not installed).
-        /// </param>
-        public MeterSampler(Func<ITemperatureSource>? temperatureFactory)
+        /// <param name="registry">The behaviour behind the catalogue ids.</param>
+        public MeterSampler(MeterRegistry registry)
         {
-            this.temperatureFactory = temperatureFactory;
+            this.registry = registry;
         }
 
-        /// <summary>Samples every visible meter.</summary>
+        /// <summary>Samples every visible group.</summary>
         /// <param name="settings">The current settings.</param>
-        /// <param name="now">The local time, for the clock.</param>
-        /// <param name="uptime">The time since boot, for the clock.</param>
-        /// <returns>One section per visible meter, in display order.</returns>
-        public IReadOnlyList<MeterSection> Sample(GadgetSettings settings, DateTime now, TimeSpan uptime)
+        /// <param name="context">The clock values.</param>
+        /// <returns>One section per visible group that has a visible item, in display order.</returns>
+        public IReadOnlyList<GroupSection> Sample(GadgetSettings settings, SampleContext context)
         {
-            bool needCpu = settings.IsVisible(MeterCatalog.CpuCores) || settings.IsVisible(MeterCatalog.CpuTotal);
-            bool needGpu = settings.IsVisible(MeterCatalog.GpuLoad) || settings.IsVisible(MeterCatalog.GpuMemory);
-            bool needTemperatures = settings.IsVisible(MeterCatalog.Temperatures)
-                && settings.UseLibreHardwareMonitor
-                && temperatureFactory != null;
+            List<GroupSetting> groups = settings.Groups.Where(g => g.Visible && g.Items.Any(i => i.Visible)).ToList();
+            HashSet<string> needed = new HashSet<string>(
+                groups.SelectMany(g => g.Items.Where(i => i.Visible))
+                    .Select(i => MeterCatalog.GetItem(i.Id).SourceId)
+                    .Where(sourceId => registry.UnavailableReason(sourceId, settings) == null));
 
-            cpu = Maintain(needCpu, cpu, () => new CpuCounterProvider());
-            gpu = Maintain(needGpu, gpu, () => new GpuCounterProvider());
-            network = Maintain(settings.IsVisible(MeterCatalog.Network), network, () => new NetworkProvider());
-            disks = Maintain(settings.IsVisible(MeterCatalog.Disks), disks, () => new DiskProvider());
-            temperatures = Maintain(needTemperatures, temperatures, () => temperatureFactory!());
-
-            IReadOnlyList<CoreLoad>? loads = cpu?.Read();
-            IReadOnlyList<GpuSample>? gpus = gpu?.Read();
-            MemorySample? mem = settings.IsVisible(MeterCatalog.Memory) || settings.IsVisible(MeterCatalog.Commit)
-                ? memory.Read()
-                : null;
-
-            List<MeterSection> sections = new List<MeterSection>();
-            foreach (MeterSetting meter in settings.Meters)
-            {
-                if (!meter.Visible)
-                {
-                    continue;
-                }
-
-                IReadOnlyList<MeterRow> rows = BuildRows(meter.Id, settings, loads, gpus, mem, now, uptime);
-                sections.Add(new MeterSection(meter.Id, MeterCatalog.Get(meter.Id).Title, rows));
-            }
-
-            return sections;
+            Maintain(needed);
+            Dictionary<string, object> snapshots = needed.ToDictionary(id => id, id => open[id].Read(context));
+            return groups.Select(g => BuildSection(g, settings, snapshots)).ToList();
         }
 
-        /// <summary>Releases every provider.</summary>
+        /// <summary>Releases every open source.</summary>
         public void Dispose()
         {
-            cpu?.Dispose();
-            cpu = null;
-            temperatures?.Dispose();
-            temperatures = null;
+            foreach (SampleSource source in open.Values)
+            {
+                source.Dispose();
+            }
+
+            open.Clear();
         }
 
-        private IReadOnlyList<MeterRow> BuildRows(
-            string id,
-            GadgetSettings settings,
-            IReadOnlyList<CoreLoad>? loads,
-            IReadOnlyList<GpuSample>? gpus,
-            MemorySample? mem,
-            DateTime now,
-            TimeSpan uptime)
+        private void Maintain(HashSet<string> needed)
         {
-            switch (id)
+            foreach (string sourceId in open.Keys.Where(id => !needed.Contains(id)).ToList())
             {
-                case MeterCatalog.CpuTotal:
-                    return MeterRowBuilder.CpuTotal(loads!);
-                case MeterCatalog.CpuCores:
-                    return MeterRowBuilder.CpuCores(loads!);
-                case MeterCatalog.Memory:
-                    return MeterRowBuilder.Memory(mem!);
-                case MeterCatalog.Commit:
-                    return MeterRowBuilder.Commit(mem!);
-                case MeterCatalog.GpuLoad:
-                    return MeterRowBuilder.GpuLoad(gpus!);
-                case MeterCatalog.GpuMemory:
-                    return MeterRowBuilder.GpuMemory(gpus!);
-                case MeterCatalog.Network:
-                    return MeterRowBuilder.Network(network!.Read());
-                case MeterCatalog.Disks:
-                    return MeterRowBuilder.Disks(disks!.Read());
-                case MeterCatalog.Temperatures:
-                    return temperatures != null
-                        ? MeterRowBuilder.Temperatures(temperatures.Read())
-                        : new[] { new MeterRow("Temperatures", UnavailableReason(settings), 0.0, false) };
-                case MeterCatalog.Clock:
-                    return MeterRowBuilder.Clock(now, uptime);
-                default:
-                    throw new InvalidOperationException("No sampler for meter '" + id + "'.");
+                open[sourceId].Dispose();
+                open.Remove(sourceId);
+            }
+
+            foreach (string sourceId in needed.Where(id => !open.ContainsKey(id)))
+            {
+                open[sourceId] = registry.Open(sourceId);
             }
         }
 
-        private string UnavailableReason(GadgetSettings settings)
+        private GroupSection BuildSection(GroupSetting group, GadgetSettings settings, Dictionary<string, object> snapshots)
         {
-            if (!settings.UseLibreHardwareMonitor)
+            List<MeterRow> rows = new List<MeterRow>();
+            foreach (ItemSetting item in group.Items.Where(i => i.Visible))
             {
-                return "turn on LibreHardwareMonitor in settings";
+                rows.AddRange(ItemRows(item.Id, settings, snapshots));
             }
 
-            return "needs administrator rights";
+            return new GroupSection(group.Id, MeterCatalog.GetGroup(group.Id).Title, group.Collapsed, rows);
         }
 
-        private static T? Maintain<T>(bool needed, T? current, Func<T> create)
-            where T : class
+        private IReadOnlyList<MeterRow> ItemRows(string itemId, GadgetSettings settings, Dictionary<string, object> snapshots)
         {
-            if (needed)
+            ItemDefinition item = MeterCatalog.GetItem(itemId);
+            if (snapshots.TryGetValue(item.SourceId, out object? snapshot))
             {
-                return current ?? create();
+                return registry.Rows(itemId, snapshot, settings);
             }
 
-            (current as IDisposable)?.Dispose();
-            return null;
+            string reason = registry.UnavailableReason(item.SourceId, settings)
+                ?? throw new InvalidOperationException("Source '" + item.SourceId + "' was not read.");
+            return new[] { new MeterRow(string.Empty, reason, 0.0, false) };
         }
     }
 }

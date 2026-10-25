@@ -35,6 +35,9 @@ namespace SysGadget.App
         /// <summary>Raised with the new state when the user toggles Always on top in the context menu.</summary>
         public event Action<bool>? TopmostToggled;
 
+        /// <summary>Raised with the group id when the user clicks a group header.</summary>
+        public event Action<string>? GroupHeaderClicked;
+
         /// <summary>Raised after the user dragged the window to a new place.</summary>
         public event Action? DragFinished;
 
@@ -67,6 +70,12 @@ namespace SysGadget.App
                 DragMove();
                 DragFinished?.Invoke();
             }
+        }
+
+        private void OnGroupHeaderMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true; // a header click toggles the group and must not start a window drag
+            GroupHeaderClicked?.Invoke(((GroupViewModel)((FrameworkElement)sender).DataContext).Id);
         }
 
         private void OnSettingsClick(object sender, RoutedEventArgs e)

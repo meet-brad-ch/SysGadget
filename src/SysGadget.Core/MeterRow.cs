@@ -1,6 +1,6 @@
 namespace SysGadget.Core
 {
-    /// <summary>One line of a meter: a label, a value text and optionally a bar.</summary>
+    /// <summary>One line of an item: a label, a value text and optionally a bar.</summary>
     public sealed class MeterRow
     {
         /// <summary>Creates a row.</summary>
@@ -8,12 +8,14 @@ namespace SysGadget.Core
         /// <param name="valueText">Right text.</param>
         /// <param name="percent">Bar fill, 0 to 100; ignored without a bar.</param>
         /// <param name="hasBar">Whether the row draws a bar.</param>
-        public MeterRow(string label, string valueText, double percent, bool hasBar)
+        /// <param name="compact">True draws the row as one thin cell of a strip instead of a line.</param>
+        public MeterRow(string label, string valueText, double percent, bool hasBar, bool compact = false)
         {
             Label = label;
             ValueText = valueText;
             Percent = percent;
             HasBar = hasBar;
+            Compact = compact;
         }
 
         /// <summary>Left text.</summary>
@@ -27,5 +29,8 @@ namespace SysGadget.Core
 
         /// <summary>Whether the row draws a bar.</summary>
         public bool HasBar { get; }
+
+        /// <summary>True draws the row as one thin cell of a strip instead of a line.</summary>
+        public bool Compact { get; }
     }
 }

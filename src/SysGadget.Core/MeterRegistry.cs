@@ -1,0 +1,146 @@
+using System;
+using System.Collections.Generic;
+
+namespace SysGadget.Core
+{
+    /// <summary>
+    /// The behaviour behind the <see cref="MeterCatalog"/> ids: how to open each source and how to
+    /// turn a source snapshot into the rows of each item. The constructor checks that the catalogue
+    /// is fully covered, so a new catalogue entry without behaviour fails at start-up.
+    /// </summary>
+    public sealed class MeterRegistry
+    {
+        private readonly Dictionary<string, Func<SampleSource>> sources = new Dictionary<string, Func<SampleSource>>();
+        private readonly Dictionary<string, Func<object, GadgetSettings, IReadOnlyList<MeterRow>>> items =
+            new Dictionary<string, Func<object, GadgetSettings, IReadOnlyList<MeterRow>>>();
+
+        private readonly Func<ITemperatureSource>? temperatureFactory;
+
+        /// <summary>Builds the registry.</summary>
+        /// <param name="temperatureFactory">
+        /// Opens the temperature source, or null when none is available (no admin rights).
+        /// </param>
+        /// <exception cref="InvalidOperationException">A catalogue source or item has no behaviour.</exception>
+        public MeterRegistry(Func<ITemperatureSource>? temperatureFactory)
+        {
+            this.temperatureFactory = temperatureFactory;
+            AddSources();
+            AddItems();
+            CheckCoverage();
+        }
+
+        /// <summary>Why a source cannot be opened now, or null when it can.</summary>
+        /// <param name="sourceId">The source id.</param>
+        /// <param name="settings">The current settings.</param>
+        /// <returns>A reason for the user, or null.</returns>
+        public string? UnavailableReason(string sourceId, GadgetSettings settings)
+        {
+            if (sourceId != MeterCatalog.Sources.Temperature)
+            {
+                return null;
+            }
+
+            if (!settings.UseLibreHardwareMonitor)
+            {
+                return "Turn on in Settings";
+            }
+
+            return temperatureFactory == null ? "Needs admin rights" : null;
+        }
+
+        /// <summary>Opens a source.</summary>
+        /// <param name="sourceId">The source id; check <see cref="UnavailableReason"/> first.</param>
+        /// <returns>The open source.</returns>
+        public SampleSource Open(string sourceId)
+        {
+            return sources[sourceId]();
+        }
+
+        /// <summary>Turns a snapshot into the rows of one item.</summary>
+        /// <param name="itemId">The item id.</param>
+        /// <param name="snapshot">The snapshot of the item's source.</param>
+        /// <param name="settings">The current settings.</param>
+        /// <returns>The rows.</returns>
+        public IReadOnlyList<MeterRow> Rows(string itemId, object snapshot, GadgetSettings settings)
+        {
+            return items[itemId](snapshot, settings);
+        }
+
+        private void AddSources()
+        {
+            sources[MeterCatalog.Sources.Cpu] = () =>
+            {
+                CpuCounterProvider cpu = new CpuCounterProvider();
+                return new SampleSource(context => cpu.Read(), cpu);
+            };
+            sources[MeterCatalog.Sources.Memory] = () =>
+            {
+                MemoryProvider memory = new MemoryProvider();
+                return new SampleSource(context => memory.Read(), null);
+            };
+            sources[MeterCatalog.Sources.Gpu] = () =>
+            {
+                GpuCounterProvider gpu = new GpuCounterProvider();
+                return new SampleSource(context => gpu.Read(), null);
+            };
+            sources[MeterCatalog.Sources.Disk] = () =>
+            {
+                DiskProvider disk = new DiskProvider();
+                return new SampleSource(context => disk.Read(), null);
+            };
+            sources[MeterCatalog.Sources.Network] = () =>
+            {
+                NetworkProvider network = new NetworkProvider();
+                return new SampleSource(context => network.Read(), null);
+            };
+            sources[MeterCatalog.Sources.Temperature] = () =>
+            {
+                ITemperatureSource temperatures = temperatureFactory!();
+                return new SampleSource(context => temperatures.Read(), temperatures);
+            };
+            sources[MeterCatalog.Sources.Clock] = () => new SampleSource(context => context, null);
+        }
+
+        private void AddItems()
+        {
+            Add<IReadOnlyList<CoreLoad>>(MeterCatalog.CpuTotal, (loads, s) => MeterRowBuilder.CpuTotal(loads));
+            Add<IReadOnlyList<CoreLoad>>(MeterCatalog.CpuCores, (loads, s) => MeterRowBuilder.CpuCores(loads, s.UseCompactCores));
+            Add<MemorySample>(MeterCatalog.Ram, (memory, s) => MeterRowBuilder.Memory(memory));
+            Add<MemorySample>(MeterCatalog.Commit, (memory, s) => MeterRowBuilder.Commit(memory));
+            Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuLoad, (gpus, s) => MeterRowBuilder.GpuLoad(gpus));
+            Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuMemory, (gpus, s) => MeterRowBuilder.GpuMemory(gpus));
+            Add<IReadOnlyList<DiskSample>>(MeterCatalog.Disks, (disks, s) => MeterRowBuilder.Disks(disks));
+            Add<IReadOnlyList<NetworkSample>>(MeterCatalog.NetworkRates, (network, s) => MeterRowBuilder.Network(network));
+            Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.Temperatures, (readings, s) => MeterRowBuilder.Temperatures(readings));
+            Add<SampleContext>(MeterCatalog.Time, (context, s) => MeterRowBuilder.Time(context.Now));
+            Add<SampleContext>(MeterCatalog.Uptime, (context, s) => MeterRowBuilder.Uptime(context.Uptime));
+        }
+
+        private void Add<TSnapshot>(string itemId, Func<TSnapshot, GadgetSettings, IReadOnlyList<MeterRow>> rows)
+        {
+            items[itemId] = (snapshot, settings) => rows((TSnapshot)snapshot, settings);
+        }
+
+        private void CheckCoverage()
+        {
+            foreach (string sourceId in MeterCatalog.Sources.All)
+            {
+                if (!sources.ContainsKey(sourceId))
+                {
+                    throw new InvalidOperationException("Source '" + sourceId + "' has no factory.");
+                }
+            }
+
+            foreach (GroupDefinition group in MeterCatalog.Groups)
+            {
+                foreach (ItemDefinition item in group.Items)
+                {
+                    if (!items.ContainsKey(item.Id) || !sources.ContainsKey(item.SourceId))
+                    {
+                        throw new InvalidOperationException("Item '" + item.Id + "' has no row function or no source.");
+                    }
+                }
+            }
+        }
+    }
+}
