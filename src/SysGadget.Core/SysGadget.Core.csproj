@@ -3,6 +3,18 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="CoreLoad.cs" />
+    <Compile Include="CpuCounterProvider.cs" />
+    <Compile Include="ProcessorInstanceName.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+  </ItemGroup>
 
 </Project>
