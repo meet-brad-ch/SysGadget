@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SysGadget.Core/SysGadget.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SysGadget.Core.Tests/SysGadget.Core.Tests.csproj" />
+  </Folder>
+</Solution>
