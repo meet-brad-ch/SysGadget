@@ -15,8 +15,9 @@ namespace SysGadget.App
         private const double RowReserveWidth = 140.0;
         private const double MinLabelWidth = 64.0;
 
-        // card padding and border (20) + gap and room for a value like "63 °C" or "Sun 10:35:12" (70)
-        private const double TextRowReserveWidth = 90.0;
+        // card padding and border (20) + gap and room for a value like "63 °C" (42); a longer value
+        // ("Sun 10:35:12") has a short label beside it
+        private const double TextRowReserveWidth = 62.0;
 
         private double sectionWidth = 224.0;
         private Orientation panelOrientation = Orientation.Vertical;

@@ -74,7 +74,7 @@ namespace SysGadget.App.Tests
         {
             GadgetViewModel view = new GadgetViewModel { SectionWidth = 224 };
 
-            Assert.Equal(134.0, view.TextLabelMaxWidth, 6);
+            Assert.Equal(162.0, view.TextLabelMaxWidth, 6);
             Assert.True(view.TextLabelMaxWidth > view.LabelMaxWidth);
         }
 
