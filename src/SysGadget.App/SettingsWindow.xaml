@@ -56,6 +56,9 @@
                       IsChecked="{Binding AlwaysOnTop}" />
         </Grid>
 
+        <CheckBox Margin="0,4,0,0" IsChecked="{Binding ReserveSpace}"
+                  Content="Reserve screen space (maximised windows stop at the gadget)" />
+
         <CheckBox Margin="0,4,0,0" IsChecked="{Binding UseLibreHardwareMonitor}"
                   Content="Use LibreHardwareMonitor (temperatures; restarts as administrator)" />
 

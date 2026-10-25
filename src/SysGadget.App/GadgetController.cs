@@ -126,24 +126,66 @@ namespace SysGadget.App
 
             if (settings.Edge == DockEdge.Floating)
             {
-                docker.Undock();
-                window.SizeToContent = SizeToContent.Height;
-                window.Width = settings.Width;
-                int left = settings.FloatingLeft.HasValue
-                    ? (int)settings.FloatingLeft.Value
-                    : screen.WorkingArea.Right - (int)(settings.Width * scale) - FloatingMarginPx;
-                int top = settings.FloatingTop.HasValue ? (int)settings.FloatingTop.Value : screen.WorkingArea.Top + FloatingMarginPx;
-                window.Left = left / scale;
-                window.Top = top / scale;
-                return;
+                PlaceFloating(screen, scale);
             }
+            else if (settings.ReserveSpace)
+            {
+                PlaceReserved(screen, scale);
+            }
+            else
+            {
+                PlaceOverlay(screen, scale);
+            }
+        }
 
+        private void PlaceFloating(Screen screen, double scale)
+        {
+            docker.Undock();
+            window.SizeToContent = SizeToContent.Height;
+            window.Width = settings.Width;
+            int left = settings.FloatingLeft.HasValue
+                ? (int)settings.FloatingLeft.Value
+                : screen.WorkingArea.Right - (int)(settings.Width * scale) - FloatingMarginPx;
+            int top = settings.FloatingTop.HasValue ? (int)settings.FloatingTop.Value : screen.WorkingArea.Top + FloatingMarginPx;
+            window.Left = left / scale;
+            window.Top = top / scale;
+        }
+
+        /// <summary>Against the edge, only as tall as the cards, reserving no screen space.</summary>
+        private void PlaceOverlay(Screen screen, double scale)
+        {
+            docker.Undock();
+            Rectangle area = screen.WorkingArea;
+            bool sideBar = settings.Edge == DockEdge.Left || settings.Edge == DockEdge.Right;
+            window.SizeToContent = SizeToContent.Height;
+            window.Width = sideBar ? settings.Width : area.Width / scale;
+            window.UpdateLayout();
+            double widthPx = window.ActualWidth * scale;
+            double heightPx = window.ActualHeight * scale;
+            window.Left = (settings.Edge == DockEdge.Right ? area.Right - widthPx : area.Left) / scale;
+            window.Top = (settings.Edge == DockEdge.Bottom ? area.Bottom - heightPx : area.Top) / scale;
+        }
+
+        /// <summary>As an application bar: Windows reserves the whole edge, so maximised windows stop at it.</summary>
+        private void PlaceReserved(Screen screen, double scale)
+        {
             bool sideBar = settings.Edge == DockEdge.Left || settings.Edge == DockEdge.Right;
             int thickness = sideBar
                 ? (int)(settings.Width * scale)
                 : MeasureHeightPx(screen.WorkingArea.Width / scale, scale);
             window.SizeToContent = SizeToContent.Manual;
             docker.Dock(settings.Edge, screen.Bounds, screen.WorkingArea, thickness, settings.AlwaysOnTop);
+        }
+
+        /// <summary>
+        /// Whether the window must be placed again when its content height changes: a reserved top or
+        /// bottom bar takes the content height as its thickness, and a bottom overlay keeps its lower
+        /// edge on the work area. The other modes grow downwards by themselves.
+        /// </summary>
+        private bool LayoutFollowsContent()
+        {
+            bool horizontal = settings.Edge == DockEdge.Top || settings.Edge == DockEdge.Bottom;
+            return settings.ReserveSpace ? horizontal : settings.Edge == DockEdge.Bottom;
         }
 
         private int MeasureHeightPx(double widthDip, double scale)
@@ -180,7 +222,7 @@ namespace SysGadget.App
 
                 viewModel.Update(sections);
                 viewModel.Status = null;
-                if (settings.Edge == DockEdge.Top || settings.Edge == DockEdge.Bottom)
+                if (LayoutFollowsContent())
                 {
                     ApplyLayout();
                 }
@@ -226,7 +268,7 @@ namespace SysGadget.App
             settings = next;
             store.Save(settings);
             viewModel.Find(groupId)!.IsCollapsed = settings.IsCollapsed(groupId); // show it now, not at the next tick
-            if (settings.Edge == DockEdge.Top || settings.Edge == DockEdge.Bottom)
+            if (LayoutFollowsContent())
             {
                 ApplyLayout();
             }

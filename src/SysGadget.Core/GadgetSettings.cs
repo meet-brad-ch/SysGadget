@@ -35,6 +35,13 @@ namespace SysGadget.Core
         /// <summary>Top position of a floating window in screen pixels; null places it at the top right.</summary>
         public double? FloatingTop { get; set; }
 
+        /// <summary>
+        /// Reserve the docked edge like the taskbar does, so maximised windows stop at the gadget.
+        /// Windows reserves the full edge, so the gadget then fills it top to bottom. Off: the gadget
+        /// sits against the edge, only as tall as its content, over other windows.
+        /// </summary>
+        public bool ReserveSpace { get; set; }
+
         /// <summary>Keep the gadget above other windows.</summary>
         public bool AlwaysOnTop { get; set; } = true;
 
