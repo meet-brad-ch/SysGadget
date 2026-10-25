@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using SysGadget.Core;
 
 namespace SysGadget.App
@@ -27,6 +27,20 @@ namespace SysGadget.App
             IntervalBox.ItemsSource = new[] { 250, 500, 1000, 2000, 5000 };
             DataContext = working;
             RebuildTree(null);
+            UpdateModeOptions();
+        }
+
+        /// <summary>
+        /// Takes over the switches the user changed on the gadget while this window was open
+        /// (double-click, menus), so OK does not set them back.
+        /// </summary>
+        /// <param name="live">The settings now in force.</param>
+        public void TakeSwitches(GadgetSettings live)
+        {
+            working.ThinBar = live.ThinBar;
+            working.AlwaysOnTop = live.AlwaysOnTop;
+            DataContext = null; // the settings class does not notify; rebinding shows the new values
+            DataContext = working;
         }
 
         private void RebuildTree(string? selectedId)
@@ -35,33 +49,41 @@ namespace SysGadget.App
             MeterTree.ItemsSource = tree;
         }
 
+        /// <summary>Greys out the options that do not apply to the chosen position.</summary>
+        private void UpdateModeOptions()
+        {
+            bool floating = working.Edge == DockEdge.Floating;
+            ColumnsBox.IsEnabled = floating;
+            ReserveBox.IsEnabled = !floating;
+        }
+
+        private void OnEdgeChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateModeOptions();
+        }
+
         private void OnMoveUp(object sender, RoutedEventArgs e)
         {
-            MoveSelected(-1);
+            Move((SettingsTreeNode)((FrameworkElement)sender).DataContext, -1);
         }
 
         private void OnMoveDown(object sender, RoutedEventArgs e)
         {
-            MoveSelected(1);
+            Move((SettingsTreeNode)((FrameworkElement)sender).DataContext, 1);
         }
 
-        private void MoveSelected(int delta)
+        private void Move(SettingsTreeNode node, int delta)
         {
-            if (!(MeterTree.SelectedItem is SettingsTreeNode selected))
+            if (node.IsGroup)
             {
-                return;
-            }
-
-            if (selected.IsGroup)
-            {
-                working.MoveGroup(selected.Id, delta);
+                working.MoveGroup(node.Id, delta);
             }
             else
             {
-                working.MoveItem(selected.Id, delta);
+                working.MoveItem(node.Id, delta);
             }
 
-            RebuildTree(selected.Id);
+            RebuildTree(node.Id);
         }
 
         private void OnApply(object sender, RoutedEventArgs e)
@@ -73,6 +95,11 @@ namespace SysGadget.App
         {
             apply(working.Clone());
             Close();
+        }
+
+        private void OnCancel(object sender, RoutedEventArgs e)
+        {
+            Close(); // IsCancel alone closes only modal dialogs; this window is not modal
         }
     }
 }

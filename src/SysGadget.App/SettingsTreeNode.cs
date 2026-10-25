@@ -12,16 +12,24 @@ namespace SysGadget.App
     internal sealed class SettingsTreeNode : ObservableObject
     {
         private readonly GadgetSettings working;
+        private readonly SettingsTreeNode? parent;
         private bool isExpanded = true;
         private bool isSelected;
 
-        private SettingsTreeNode(GadgetSettings working, string id, string title, bool isGroup)
+        private SettingsTreeNode(GadgetSettings working, string id, string title, bool isGroup, SettingsTreeNode? parent)
         {
             this.working = working;
+            this.parent = parent;
             Id = id;
             Title = title;
             IsGroup = isGroup;
         }
+
+        /// <summary>
+        /// True for the first checked item of its group: the item the thin bar shows. Moving or
+        /// checking items changes it, so the tree can mark it.
+        /// </summary>
+        public bool IsFirstShown => parent != null && IsChecked && parent.Children.FirstOrDefault(c => c.IsChecked) == this;
 
         /// <summary>Group or item id.</summary>
         public string Id { get; }
@@ -51,6 +59,13 @@ namespace SysGadget.App
                 }
 
                 Raise(nameof(IsChecked));
+                if (parent != null)
+                {
+                    foreach (SettingsTreeNode sibling in parent.Children)
+                    {
+                        sibling.Raise(nameof(IsFirstShown));
+                    }
+                }
             }
         }
 
@@ -78,14 +93,14 @@ namespace SysGadget.App
             List<SettingsTreeNode> groups = new List<SettingsTreeNode>();
             foreach (GroupSetting group in working.Groups)
             {
-                SettingsTreeNode node = new SettingsTreeNode(working, group.Id, MeterCatalog.GetGroup(group.Id).Title, true)
+                SettingsTreeNode node = new SettingsTreeNode(working, group.Id, MeterCatalog.GetGroup(group.Id).Title, true, null)
                 {
                     IsExpanded = !collapsedGroupIds.Contains(group.Id),
                     IsSelected = group.Id == selectedId,
                 };
                 foreach (ItemSetting item in group.Items)
                 {
-                    node.Children.Add(new SettingsTreeNode(working, item.Id, MeterCatalog.GetItem(item.Id).Title, false)
+                    node.Children.Add(new SettingsTreeNode(working, item.Id, MeterCatalog.GetItem(item.Id).Title, false, node)
                     {
                         IsSelected = item.Id == selectedId,
                     });

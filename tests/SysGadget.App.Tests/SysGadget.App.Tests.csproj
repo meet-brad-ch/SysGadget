@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="GadgetWindowTests.cs" />
     <Compile Include="ReplaceableTests.cs" />
+    <Compile Include="SettingsWindowTests.cs" />
     <Compile Include="StaRunner.cs" />
     <Compile Include="ViewModelTests.cs" />
   </ItemGroup>

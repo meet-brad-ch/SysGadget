@@ -103,6 +103,27 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
+        public void SettingsTreeNode_IsFirstShown_MarksTheFirstTickedItem_AndFollowsTheTicks()
+        {
+            GadgetSettings working = GadgetSettings.CreateDefault();
+            List<SettingsTreeNode> tree = SettingsTreeNode.Build(working, new HashSet<string>(), null);
+            SettingsTreeNode cpu = tree.Single(n => n.Id == MeterCatalog.CpuGroup);
+            SettingsTreeNode total = cpu.Children.Single(c => c.Id == MeterCatalog.CpuTotal);
+            SettingsTreeNode cores = cpu.Children.Single(c => c.Id == MeterCatalog.CpuCores);
+            List<string> raised = new List<string>();
+            cores.PropertyChanged += (sender, args) => raised.Add(args.PropertyName!);
+
+            Assert.True(total.IsFirstShown);
+            Assert.False(cores.IsFirstShown);
+            Assert.False(cpu.IsFirstShown);
+
+            total.IsChecked = false;
+
+            Assert.True(cores.IsFirstShown);
+            Assert.Contains(nameof(SettingsTreeNode.IsFirstShown), raised);
+        }
+
+        [Fact]
         public void SettingsTreeNode_Checkboxes_WriteIntoTheSettings_InDisplayOrder()
         {
             GadgetSettings working = GadgetSettings.CreateDefault();

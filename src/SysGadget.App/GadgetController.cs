@@ -325,9 +325,20 @@ namespace SysGadget.App
             string[] monitors = Screen.AllScreens
                 .Select((s, i) => (i + 1) + ": " + s.Bounds.Width + "x" + s.Bounds.Height + (s.Primary ? " (primary)" : string.Empty))
                 .ToArray();
-            settingsWindow = new SettingsWindow(settings, monitors, ApplySettings);
+            settingsWindow = new SettingsWindow(settings, monitors, ApplyFromSettingsWindow);
             settingsWindow.Closed += (sender, args) => settingsWindow = null;
             settingsWindow.Show();
+        }
+
+        /// <summary>
+        /// Applies the settings window's copy. The window does not edit the floating position, so the
+        /// live one is kept: dragging the gadget while the window is open must survive OK.
+        /// </summary>
+        private void ApplyFromSettingsWindow(GadgetSettings edited)
+        {
+            edited.FloatingLeft = settings.FloatingLeft;
+            edited.FloatingTop = settings.FloatingTop;
+            ApplySettings(edited);
         }
 
         private void SetThin(bool thin)
@@ -335,6 +346,7 @@ namespace SysGadget.App
             GadgetSettings next = settings.Clone();
             next.ThinBar = thin;
             ApplySettings(next);
+            settingsWindow?.TakeSwitches(settings);
         }
 
         private void SetTopmost(bool topmost)
@@ -342,6 +354,7 @@ namespace SysGadget.App
             GadgetSettings next = settings.Clone();
             next.AlwaysOnTop = topmost;
             ApplySettings(next);
+            settingsWindow?.TakeSwitches(settings);
         }
 
         private void SaveFloatingPosition()
