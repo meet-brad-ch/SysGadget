@@ -54,7 +54,7 @@ namespace SysGadget.Core
         public bool UseLibreHardwareMonitor { get; set; }
 
         /// <summary>Show the cores as a compact strip of thin bars instead of one row per core.</summary>
-        public bool UseCompactCores { get; set; }
+        public bool UseCompactCores { get; set; } = true;
 
         /// <summary>Groups in display order, each with its items.</summary>
         public List<GroupSetting> Groups { get; set; } = new List<GroupSetting>();

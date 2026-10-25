@@ -27,6 +27,7 @@ namespace SysGadget.Core.Tests
             Assert.True(settings.IsItemVisible(MeterCatalog.CpuCores));
             Assert.False(settings.IsItemVisible(MeterCatalog.Temperatures));
             Assert.True(settings.IsGroupVisible(MeterCatalog.SensorsGroup));
+            Assert.True(settings.UseCompactCores);
         }
 
         [Fact]
@@ -144,7 +145,7 @@ namespace SysGadget.Core.Tests
                 written.Opacity = 0.5;
                 written.IntervalMs = 2000;
                 written.UseLibreHardwareMonitor = true;
-                written.UseCompactCores = true;
+                written.UseCompactCores = false;
                 written.SetItemVisible(MeterCatalog.NetworkRates, true);
                 written.SetGroupVisible(MeterCatalog.GpuGroup, false);
                 written.SetCollapsed(MeterCatalog.CpuGroup, true);
@@ -162,7 +163,7 @@ namespace SysGadget.Core.Tests
                 Assert.Equal(0.5, read.Opacity, 6);
                 Assert.Equal(2000, read.IntervalMs);
                 Assert.True(read.UseLibreHardwareMonitor);
-                Assert.True(read.UseCompactCores);
+                Assert.False(read.UseCompactCores);
                 Assert.True(read.IsItemVisible(MeterCatalog.NetworkRates));
                 Assert.False(read.IsGroupVisible(MeterCatalog.GpuGroup));
                 Assert.True(read.IsCollapsed(MeterCatalog.CpuGroup));
