@@ -15,6 +15,7 @@ namespace SysGadget.App
         private readonly SettingsTreeNode? parent;
         private bool isExpanded = true;
         private bool isSelected;
+        private DropMark dropMark;
 
         private SettingsTreeNode(GadgetSettings working, string id, string title, bool isGroup, SettingsTreeNode? parent)
         {
@@ -67,6 +68,21 @@ namespace SysGadget.App
                     }
                 }
             }
+        }
+
+        /// <summary>Where a row being dragged over this one would land; drawn as a line.</summary>
+        public DropMark DropMark
+        {
+            get => dropMark;
+            set => Set(ref dropMark, value);
+        }
+
+        /// <summary>Whether a dragged node may be dropped on this one: groups among groups, items inside their own group.</summary>
+        /// <param name="dragged">The node being dragged.</param>
+        /// <returns>True when the drop reorders something.</returns>
+        public bool Accepts(SettingsTreeNode dragged)
+        {
+            return dragged != this && dragged.IsGroup == IsGroup && dragged.parent == parent;
         }
 
         /// <summary>Whether a group node shows its items.</summary>

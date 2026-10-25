@@ -51,10 +51,10 @@ namespace SysGadget.App.Tests
             }
         }
 
-        private static Button ButtonOf(Window window, string nodeId, string content)
+        private static SettingsTreeNode Node(SettingsWindow window, string id)
         {
-            return Descendants<Button>(window).Single(b =>
-                b.DataContext is SettingsTreeNode node && node.Id == nodeId && (string)b.Content == content);
+            IEnumerable<SettingsTreeNode> groups = (IEnumerable<SettingsTreeNode>)window.MeterTree.ItemsSource;
+            return groups.Concat(groups.SelectMany(g => g.Children)).Single(n => n.Id == id);
         }
 
         /// <summary>Regression: Cancel relied on IsCancel, which closes only modal dialogs, so it did nothing.</summary>
@@ -76,7 +76,7 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
-        public void MoveUp_OnAnItemRow_ReordersItsGroup_AndOkAppliesTheOrder()
+        public void Reorder_ItemDroppedAboveAnother_AndGroupDroppedBelowAnother_OkAppliesTheOrder()
         {
             StaRunner.Run(() =>
             {
@@ -84,12 +84,29 @@ namespace SysGadget.App.Tests
                 GadgetSettings settings = GadgetSettings.CreateDefault();
                 SettingsWindow window = Open(settings, applied);
 
-                Click(ButtonOf(window, MeterCatalog.CpuCores, "▲"));
+                window.Reorder(Node(window, MeterCatalog.CpuCores), Node(window, MeterCatalog.CpuTotal), false);
+                window.Reorder(Node(window, MeterCatalog.CpuGroup), Node(window, MeterCatalog.GpuGroup), true);
                 Click(Descendants<Button>(window).Single(b => (string)b.Content == "OK"));
 
-                GroupSetting cpu = applied.Single().Groups.Single(g => g.Id == MeterCatalog.CpuGroup);
-                Assert.Equal(new[] { MeterCatalog.CpuCores, MeterCatalog.CpuTotal }, cpu.Items.Select(i => i.Id));
+                GadgetSettings result = applied.Single();
+                Assert.Equal(new[] { MeterCatalog.CpuCores, MeterCatalog.CpuTotal },
+                    result.Groups.Single(g => g.Id == MeterCatalog.CpuGroup).Items.Select(i => i.Id));
+                Assert.Equal(new[] { MeterCatalog.MemoryGroup, MeterCatalog.GpuGroup, MeterCatalog.CpuGroup },
+                    result.Groups.Take(3).Select(g => g.Id));
                 Assert.Equal(MeterCatalog.CpuTotal, settings.Groups[0].Items[0].Id); // the window edits a copy
+            });
+        }
+
+        [Fact]
+        public void Reorder_ItemOntoAnotherGroupsItem_IsRefused()
+        {
+            StaRunner.Run(() =>
+            {
+                SettingsWindow window = Open(GadgetSettings.CreateDefault(), new List<GadgetSettings>());
+
+                Assert.Throws<System.InvalidOperationException>(
+                    () => window.Reorder(Node(window, MeterCatalog.Ram), Node(window, MeterCatalog.CpuTotal), false));
+                window.Close();
             });
         }
 

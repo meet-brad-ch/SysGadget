@@ -124,10 +124,28 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
+        public void SettingsTreeNode_Accepts_GroupsAmongGroups_AndItemsInsideTheirOwnGroup()
+        {
+            List<SettingsTreeNode> tree = SettingsTreeNode.Build(GadgetSettings.CreateDefault(), new HashSet<string>(), null);
+            SettingsTreeNode cpu = tree.Single(n => n.Id == MeterCatalog.CpuGroup);
+            SettingsTreeNode memory = tree.Single(n => n.Id == MeterCatalog.MemoryGroup);
+            SettingsTreeNode total = cpu.Children[0];
+            SettingsTreeNode cores = cpu.Children[1];
+            SettingsTreeNode ram = memory.Children[0];
+
+            Assert.True(memory.Accepts(cpu));
+            Assert.True(total.Accepts(cores));
+            Assert.False(total.Accepts(total));
+            Assert.False(ram.Accepts(cores));
+            Assert.False(cpu.Accepts(total));
+            Assert.False(total.Accepts(cpu));
+        }
+
+        [Fact]
         public void SettingsTreeNode_Checkboxes_WriteIntoTheSettings_InDisplayOrder()
         {
             GadgetSettings working = GadgetSettings.CreateDefault();
-            working.MoveGroup(MeterCatalog.GpuGroup, -2);
+            working.PlaceGroup(MeterCatalog.GpuGroup, MeterCatalog.CpuGroup, false);
 
             List<SettingsTreeNode> tree = SettingsTreeNode.Build(working, new HashSet<string> { MeterCatalog.CpuGroup }, MeterCatalog.Ram);
 

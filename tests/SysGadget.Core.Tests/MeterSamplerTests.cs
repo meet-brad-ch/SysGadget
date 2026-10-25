@@ -128,8 +128,8 @@ namespace SysGadget.Core.Tests
                 GadgetSettings settings = OnlyItems(MeterCatalog.CpuTotal, MeterCatalog.CpuCores, MeterCatalog.Ram, MeterCatalog.Commit,
                     MeterCatalog.Time, MeterCatalog.Uptime, MeterCatalog.NetworkRates, MeterCatalog.Disks);
                 settings.ThinBar = true;
-                settings.MoveItem(MeterCatalog.Commit, -1);
-                settings.MoveItem(MeterCatalog.Uptime, -1);
+                settings.PlaceItem(MeterCatalog.Commit, MeterCatalog.Ram, false);
+                settings.PlaceItem(MeterCatalog.Uptime, MeterCatalog.Time, false);
 
                 IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
 
@@ -140,7 +140,7 @@ namespace SysGadget.Core.Tests
                 Assert.True(sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single().HasBar);
 
                 settings.UseCompactCores = true;
-                settings.MoveItem(MeterCatalog.CpuCores, -1);
+                settings.PlaceItem(MeterCatalog.CpuCores, MeterCatalog.CpuTotal, false);
                 GroupSection cpu = sampler.Sample(settings, Context).Single(s => s.Id == MeterCatalog.CpuGroup);
 
                 Assert.Equal(Environment.ProcessorCount, cpu.Rows.Count);

@@ -137,21 +137,29 @@ namespace SysGadget.Core
             FindItem(itemId).Visible = visible;
         }
 
-        /// <summary>Moves a group up or down; a move past either end is ignored.</summary>
-        /// <param name="groupId">The group id.</param>
-        /// <param name="delta">-1 moves it up, +1 down.</param>
-        public void MoveGroup(string groupId, int delta)
+        /// <summary>Puts a group right before or after another group (a drag and drop).</summary>
+        /// <param name="groupId">The group to move.</param>
+        /// <param name="targetGroupId">The group it is dropped on.</param>
+        /// <param name="after">True places it after the target, false before.</param>
+        public void PlaceGroup(string groupId, string targetGroupId, bool after)
         {
-            Move(Groups, FindGroup(groupId), delta);
+            Place(Groups, FindGroup(groupId), FindGroup(targetGroupId), after);
         }
 
-        /// <summary>Moves an item up or down inside its group; a move past either end is ignored.</summary>
-        /// <param name="itemId">The item id.</param>
-        /// <param name="delta">-1 moves it up, +1 down.</param>
-        public void MoveItem(string itemId, int delta)
+        /// <summary>Puts an item right before or after another item of the same group (a drag and drop).</summary>
+        /// <param name="itemId">The item to move.</param>
+        /// <param name="targetItemId">The item it is dropped on.</param>
+        /// <param name="after">True places it after the target, false before.</param>
+        /// <exception cref="InvalidOperationException">The items belong to different groups.</exception>
+        public void PlaceItem(string itemId, string targetItemId, bool after)
         {
-            GroupSetting group = FindGroup(MeterCatalog.GroupOf(itemId).Id);
-            Move(group.Items, FindItem(itemId), delta);
+            string groupId = MeterCatalog.GroupOf(itemId).Id;
+            if (MeterCatalog.GroupOf(targetItemId).Id != groupId)
+            {
+                throw new InvalidOperationException("Item '" + itemId + "' cannot move into another group than '" + groupId + "'.");
+            }
+
+            Place(FindGroup(groupId).Items, FindItem(itemId), FindItem(targetItemId), after);
         }
 
         /// <summary>
@@ -237,17 +245,17 @@ namespace SysGadget.Core
             return item ?? throw new KeyNotFoundException("Item '" + itemId + "' is not in the settings.");
         }
 
-        private static void Move<T>(List<T> list, T entry, int delta)
+        private static void Place<T>(List<T> list, T entry, T target, bool after)
+            where T : class
         {
-            int from = list.IndexOf(entry);
-            int to = from + delta;
-            if (to < 0 || to >= list.Count)
+            if (ReferenceEquals(entry, target))
             {
-                return;
+                return; // dropped on itself
             }
 
-            list.RemoveAt(from);
-            list.Insert(to, entry);
+            list.Remove(entry);
+            int index = list.IndexOf(target);
+            list.Insert(after ? index + 1 : index, entry);
         }
 
         private static void Require(bool condition, string message)

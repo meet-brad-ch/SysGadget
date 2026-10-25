@@ -25,6 +25,8 @@
   <ItemGroup>
     <Compile Include="App.xaml.cs" />
     <Compile Include="AppBarDocker.cs" />
+    <Compile Include="DropMark.cs" />
+    <Compile Include="DropPlace.cs" />
     <Compile Include="Elevation.cs" />
     <Compile Include="GadgetController.cs" />
     <Compile Include="GadgetViewModel.cs" />

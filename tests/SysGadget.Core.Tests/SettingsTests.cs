@@ -49,21 +49,36 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void MoveGroup_AndMoveItem_ShiftOneStep_AndIgnoreMovesPastTheEnds()
+        public void PlaceGroup_PutsItBeforeOrAfterTheTarget_InBothDirections()
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
 
-            settings.MoveGroup(MeterCatalog.CpuGroup, -1);
-            Assert.Equal(MeterCatalog.CpuGroup, settings.Groups[0].Id);
-            settings.MoveGroup(MeterCatalog.CpuGroup, 1);
-            Assert.Equal(MeterCatalog.MemoryGroup, settings.Groups[0].Id);
-            Assert.Equal(MeterCatalog.CpuGroup, settings.Groups[1].Id);
+            settings.PlaceGroup(MeterCatalog.SystemGroup, MeterCatalog.CpuGroup, false);
+            Assert.Equal(new[] { MeterCatalog.SystemGroup, MeterCatalog.CpuGroup }, settings.Groups.Take(2).Select(g => g.Id));
 
-            settings.MoveItem(MeterCatalog.Uptime, -1);
+            settings.PlaceGroup(MeterCatalog.SystemGroup, MeterCatalog.GpuGroup, true);
+            Assert.Equal(
+                new[] { MeterCatalog.CpuGroup, MeterCatalog.MemoryGroup, MeterCatalog.GpuGroup, MeterCatalog.SystemGroup },
+                settings.Groups.Take(4).Select(g => g.Id));
+
+            settings.PlaceGroup(MeterCatalog.CpuGroup, MeterCatalog.CpuGroup, true);
+            Assert.Equal(MeterCatalog.CpuGroup, settings.Groups[0].Id);
+            Assert.Equal(MeterCatalog.Groups.Count, settings.Groups.Count);
+        }
+
+        [Fact]
+        public void PlaceItem_ReordersInsideTheGroup_AndRefusesAnotherGroup()
+        {
+            GadgetSettings settings = GadgetSettings.CreateDefault();
+
+            settings.PlaceItem(MeterCatalog.Uptime, MeterCatalog.Time, false);
             GroupSetting system = settings.Groups.Single(g => g.Id == MeterCatalog.SystemGroup);
             Assert.Equal(new[] { MeterCatalog.Uptime, MeterCatalog.Time }, system.Items.Select(i => i.Id));
-            settings.MoveItem(MeterCatalog.Uptime, -1);
-            Assert.Equal(MeterCatalog.Uptime, system.Items[0].Id);
+
+            settings.PlaceItem(MeterCatalog.Uptime, MeterCatalog.Time, true);
+            Assert.Equal(new[] { MeterCatalog.Time, MeterCatalog.Uptime }, system.Items.Select(i => i.Id));
+
+            Assert.Throws<InvalidOperationException>(() => settings.PlaceItem(MeterCatalog.Ram, MeterCatalog.Time, false));
         }
 
         [Fact]
@@ -125,7 +140,7 @@ namespace SysGadget.Core.Tests
             GadgetSettings copy = original.Clone();
 
             copy.SetItemVisible(MeterCatalog.CpuCores, false);
-            copy.MoveGroup(MeterCatalog.GpuGroup, -1);
+            copy.PlaceGroup(MeterCatalog.GpuGroup, MeterCatalog.CpuGroup, false);
 
             Assert.True(original.IsItemVisible(MeterCatalog.CpuCores));
             Assert.Equal(MeterCatalog.CpuGroup, original.Groups[0].Id);
@@ -152,8 +167,8 @@ namespace SysGadget.Core.Tests
                 written.ThinBar = true;
                 written.SetItemVisible(MeterCatalog.NetworkRates, true);
                 written.SetGroupVisible(MeterCatalog.GpuGroup, false);
-                written.MoveGroup(MeterCatalog.SystemGroup, -2);
-                written.MoveItem(MeterCatalog.CpuCores, -1);
+                written.PlaceGroup(MeterCatalog.SystemGroup, MeterCatalog.NetworkGroup, false);
+                written.PlaceItem(MeterCatalog.CpuCores, MeterCatalog.CpuTotal, false);
                 new SettingsStore(file).Save(written);
 
                 GadgetSettings read = new SettingsStore(file).Load();

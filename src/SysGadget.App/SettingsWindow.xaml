@@ -2,6 +2,7 @@
         x:ClassModifier="internal"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:SysGadget.App"
         Title="SysGadget settings"
         Width="440"
         SizeToContent="Height"
@@ -17,12 +18,24 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Margin" Value="0,12,0,4" />
         </Style>
-        <Style x:Key="MoveButton" TargetType="Button">
-            <Setter Property="Width" Value="20" />
-            <Setter Property="Height" Value="18" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0,0,2,0" />
-            <Setter Property="FontSize" Value="9" />
+        <!-- Lines above and below a row; the one where a dragged row would land turns blue. -->
+        <Style x:Key="LineBefore" TargetType="Rectangle">
+            <Setter Property="Height" Value="2" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding DropMark}" Value="Before">
+                    <Setter Property="Fill" Value="#2F7BEF" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="LineAfter" TargetType="Rectangle">
+            <Setter Property="Height" Value="2" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding DropMark}" Value="After">
+                    <Setter Property="Fill" Value="#2F7BEF" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
     <StackPanel Margin="14,4,14,14">
@@ -84,8 +97,10 @@
 
         <TextBlock Style="{StaticResource SectionTitle}" Text="Groups and items" />
         <TextBlock TextWrapping="Wrap" Foreground="#555" Margin="0,0,0,6"
-                   Text="Tick what to show. Use &#x25B2; &#x25BC; to change the order of the groups and of the items in a group. The first ticked item of a group is the one the thin bar shows (marked)." />
-        <TreeView x:Name="MeterTree" Height="280">
+                   Text="Tick what to show. Drag a group or an item to change the order; items stay in their group. The first ticked item of a group is the one the thin bar shows (marked)." />
+        <TreeView x:Name="MeterTree" Height="280" AllowDrop="True"
+                  PreviewMouseLeftButtonDown="OnTreeMouseDown" PreviewMouseMove="OnTreeMouseMove"
+                  DragOver="OnTreeDragOver" DragLeave="OnTreeDragLeave" Drop="OnTreeDrop">
             <TreeView.ItemContainerStyle>
                 <Style TargetType="TreeViewItem">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
@@ -94,10 +109,12 @@
             </TreeView.ItemContainerStyle>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Margin="0,1">
-                        <Button Content="&#x25B2;" Style="{StaticResource MoveButton}" Click="OnMoveUp" ToolTip="Move up" />
-                        <Button Content="&#x25BC;" Style="{StaticResource MoveButton}" Click="OnMoveDown" ToolTip="Move down" />
-                        <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="4,0,4,0" />
+                    <StackPanel Background="Transparent" Cursor="SizeAll" ToolTip="Drag to change the order"
+                                Tag="{x:Static local:SettingsWindow.RowTag}">
+                    <Rectangle Style="{StaticResource LineBefore}" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#x2807;&#x2807;" Foreground="#999" Margin="0,0,4,0" />
+                        <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,4,0" Cursor="Arrow" />
                         <TextBlock Text="{Binding Title}">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -115,6 +132,8 @@
                                 Visibility="{Binding IsFirstShown, Converter={StaticResource Visible}}">
                             <TextBlock Text="thin bar" FontSize="10" Foreground="#1F4E8C" />
                         </Border>
+                    </StackPanel>
+                    <Rectangle Style="{StaticResource LineAfter}" />
                     </StackPanel>
                 </HierarchicalDataTemplate>
             </TreeView.ItemTemplate>
