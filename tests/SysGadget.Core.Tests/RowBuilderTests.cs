@@ -122,6 +122,27 @@ namespace SysGadget.Core.Tests
         }
 
         [Theory]
+        [InlineData("GPU Hot Spot", "Hot Spot")]
+        [InlineData("GPU Memory Junction", "Memory")]
+        [InlineData("Temperature 2", "2")]
+        [InlineData("Temperature", "")]
+        [InlineData("Composite", "Composite")]
+        [InlineData("CPU Package", "Package")]
+        [InlineData("GPU", "GPU")]
+        public void ShortSensorName_DropsTheDevicePrefixAndTheWordTemperature(string sensor, string expected)
+        {
+            Assert.Equal(expected, MeterRowBuilder.ShortSensorName(sensor));
+        }
+
+        [Fact]
+        public void Temperatures_SensorWithOnlyTheWordTemperature_IsLabelledWithTheDevice()
+        {
+            MeterRow row = Assert.Single(MeterRowBuilder.Temperatures(new[] { new TemperatureReading("KINGSTON SNV2S1000G", "Temperature", 50.0) }));
+
+            Assert.Equal("SNV2S1000G", row.Label);
+        }
+
+        [Theory]
         [InlineData(70.0, null, null, AlertLevel.Normal)]
         [InlineData(75.0, null, null, AlertLevel.Warning)]
         [InlineData(90.0, null, null, AlertLevel.Critical)]
@@ -226,6 +247,8 @@ namespace SysGadget.Core.Tests
         [InlineData("WD_BLACK SN850X 1000GB", "WD_BLACK SN850X")]
         [InlineData("AMD Ryzen 9 7950X 16-Core Processor", "Ryzen 9 7950X")]
         [InlineData("Intel(R) UHD Graphics 770", "UHD Graphics 770")]
+        [InlineData("Samsung SSD 990 PRO with Heatsink 4TB", "990 PRO")]
+        [InlineData("KINGSTON SNV2S1000G", "SNV2S1000G")]
         public void ShortDeviceName_DropsVendorWordsAndCapacity(string name, string expected)
         {
             Assert.Equal(expected, MeterRowBuilder.ShortDeviceName(name));

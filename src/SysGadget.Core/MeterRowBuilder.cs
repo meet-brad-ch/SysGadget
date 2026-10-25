@@ -17,6 +17,8 @@ namespace SysGadget.Core
             "Western", "Digital", "Crucial", "Kingston", "Seagate", "Corsair", "SK", "hynix",
         };
 
+        private static readonly string[] SensorNoiseWords = { "Temperature", "Junction" };
+
         private const string WarningLimitSensor = "Warning Temperature";
         private const string CriticalLimitSensor = "Critical Temperature";
         private const double DefaultWarningCelsius = 75.0;
@@ -242,7 +244,8 @@ namespace SysGadget.Core
 
                 double? warning = reading.WarningCelsius ?? LimitOf(readings, reading.HardwareName, WarningLimitSensor);
                 double? critical = reading.CriticalCelsius ?? LimitOf(readings, reading.HardwareName, CriticalLimitSensor);
-                string label = ShortDeviceName(reading.HardwareName) + " " + ShortSensorName(reading.SensorName);
+                string sensor = ShortSensorName(reading.SensorName);
+                string label = ShortDeviceName(reading.HardwareName) + (sensor.Length > 0 ? " " + sensor : string.Empty);
                 rows.Add(TemperatureRow(label, reading, warning, critical));
             }
 
@@ -266,6 +269,11 @@ namespace SysGadget.Core
             List<string> kept = new List<string>();
             foreach (string word in name.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
+                if (string.Equals(word, "with", StringComparison.OrdinalIgnoreCase))
+                {
+                    break; // "990 PRO with Heatsink": the rest describes the variant, not the device
+                }
+
                 if (!VendorWords.Contains(word, StringComparer.OrdinalIgnoreCase) && !Capacity.IsMatch(word) && kept.Count < MaxDeviceWords)
                 {
                     kept.Add(word);
@@ -275,18 +283,26 @@ namespace SysGadget.Core
             return kept.Count == 0 ? name : string.Join(" ", kept);
         }
 
-        /// <summary>Drops a leading "GPU" or "CPU" from a sensor name; the device name already says it.</summary>
-        private static string ShortSensorName(string sensor)
+        /// <summary>
+        /// Shortens a sensor name for a row in the temperature card: drops a leading "GPU"/"CPU" (the
+        /// device name says it), the word "Temperature" (the card says it) and "Junction".
+        /// </summary>
+        /// <param name="sensor">The sensor name as LibreHardwareMonitor reports it.</param>
+        /// <returns>The short name; empty when nothing is left ("Temperature" alone).</returns>
+        public static string ShortSensorName(string sensor)
         {
-            foreach (string prefix in new[] { "GPU ", "CPU " })
+            List<string> kept = new List<string>();
+            string[] words = sensor.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < words.Length; i++)
             {
-                if (sensor.StartsWith(prefix, StringComparison.Ordinal) && sensor.Length > prefix.Length)
+                bool devicePrefix = i == 0 && words.Length > 1 && (words[i] == "GPU" || words[i] == "CPU");
+                if (!devicePrefix && !SensorNoiseWords.Contains(words[i], StringComparer.OrdinalIgnoreCase))
                 {
-                    return sensor.Substring(prefix.Length);
+                    kept.Add(words[i]);
                 }
             }
 
-            return sensor;
+            return string.Join(" ", kept);
         }
 
         /// <summary>Time of day.</summary>

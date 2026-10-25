@@ -124,9 +124,9 @@ namespace SysGadget.Core
             {
                 new ItemDefinition(NetworkRates, "Down and up", Sources.Network, false),
             }),
-            new GroupDefinition(SensorsGroup, "Sensors", new[]
+            new GroupDefinition(SensorsGroup, "Temperatures", new[]
             {
-                new ItemDefinition(Temperatures, "Temperatures (needs administrator rights)", Sources.Temperature, false),
+                new ItemDefinition(Temperatures, "All sensors (needs administrator rights)", Sources.Temperature, false),
             }),
             new GroupDefinition(SystemGroup, "System", new[]
             {
