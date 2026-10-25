@@ -166,7 +166,8 @@ namespace SysGadget.Core.Tests
                 Assert.Equal("Commit", sections.Single(s => s.Id == MeterCatalog.MemoryGroup).Rows.Single().Label);
                 Assert.Equal("Uptime", sections.Single(s => s.Id == MeterCatalog.SystemGroup).Rows.Single().Label);
                 Assert.Equal("Down", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().Label);
-                Assert.True(sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single().HasBar);
+                MeterRow disk = sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single();
+                Assert.Equal(disk.Instance, disk.Label); // the first disk's name line (space, or "no volume")
 
                 settings.UseCompactCores = true;
                 settings.PlaceItem(MeterCatalog.CpuCores, MeterCatalog.CpuTotal, false);

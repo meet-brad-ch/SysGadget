@@ -159,17 +159,17 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Disks_WithoutSpace_GiveABusyBarRow_ThenARatesTextRow()
+        public void Disks_WithoutSpace_KeepTheSameThreeRows_WithNoVolumeOnTheNameRow()
         {
-            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("2", 40.0, 1024, 0) });
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("0 D:", 40.0, 1024, 0) });
 
-            Assert.Equal(2, rows.Count);
-            Assert.Equal("2", rows[0].Label);
-            Assert.Equal("40 %", rows[0].ValueText);
-            Assert.True(rows[0].HasBar);
-            Assert.Equal("R 1.0 KB/s  W 0 B/s", rows[1].ValueText);
-            Assert.False(rows[1].HasBar);
-            Assert.All(rows, r => Assert.Equal("2", r.Instance));
+            Assert.Equal(new[] { "0 D:", "Active", string.Empty }, rows.Select(r => r.Label));
+            Assert.Equal("no volume", rows[0].ValueText);
+            Assert.False(rows[0].HasBar);
+            Assert.Equal("40 %", rows[1].ValueText);
+            Assert.True(rows[1].HasBar);
+            Assert.Equal("R 1.0 KB/s  W 0 B/s", rows[2].ValueText);
+            Assert.All(rows, r => Assert.Equal("0 D:", r.Instance));
         }
 
         [Fact]
