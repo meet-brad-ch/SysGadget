@@ -34,5 +34,43 @@ namespace SysGadget.Core.Tests
                 }
             }
         }
+
+        [Fact]
+        public void WriteAndDescribe_Written_NamesItsOwnFile()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), "SysGadgetTests-" + Guid.NewGuid().ToString("N"));
+            string file = Path.Combine(folder, "crash.log");
+            try
+            {
+                string text = new CrashLog(file).WriteAndDescribe("sampling", new InvalidOperationException("failure"));
+
+                Assert.Equal("Written to " + file + ".", text);
+                Assert.Contains("[sampling]", File.ReadAllText(file));
+            }
+            finally
+            {
+                if (Directory.Exists(folder))
+                {
+                    Directory.Delete(folder, true);
+                }
+            }
+        }
+
+        [Fact]
+        public void WriteAndDescribe_NotWritable_SaysWhyInsteadOfThrowing()
+        {
+            string folder = Path.Combine(Path.GetTempPath(), "SysGadgetTests-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(folder);
+            try
+            {
+                string text = new CrashLog(folder).WriteAndDescribe("sampling", new InvalidOperationException("failure")); // a folder, not a file
+
+                Assert.StartsWith("The crash log could not be written: ", text);
+            }
+            finally
+            {
+                Directory.Delete(folder, true);
+            }
+        }
     }
 }

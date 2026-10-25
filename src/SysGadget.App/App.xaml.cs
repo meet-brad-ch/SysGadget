@@ -80,7 +80,7 @@ namespace SysGadget.App
             reporting = true;
             try
             {
-                MessageBox.Show(Record("UI thread", e.Exception) + e.Exception, "SysGadget stopped", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(crashLog.WriteAndDescribe("UI thread", e.Exception) + "\n\n" + e.Exception, "SysGadget stopped", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -90,30 +90,12 @@ namespace SysGadget.App
 
         private void OnDomainException(object sender, UnhandledExceptionEventArgs e)
         {
-            Record("any thread", (Exception)e.ExceptionObject); // the runtime ends the process right after this
+            crashLog.Write("any thread", (Exception)e.ExceptionObject); // the runtime ends the process right after this
         }
 
         private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
         {
-            Record("unobserved task", e.Exception);
-        }
-
-        /// <summary>Writes the crash log; a failure to write is reported in the returned text, not hidden.</summary>
-        private string Record(string source, Exception error)
-        {
-            try
-            {
-                crashLog.Write(source, error);
-                return "Written to " + CrashLog.DefaultPath() + "\n\n";
-            }
-            catch (IOException logError)
-            {
-                return "The crash log could not be written: " + logError.Message + "\n\n";
-            }
-            catch (UnauthorizedAccessException logError)
-            {
-                return "The crash log could not be written: " + logError.Message + "\n\n";
-            }
+            crashLog.Write("unobserved task", e.Exception);
         }
     }
 }

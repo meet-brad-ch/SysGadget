@@ -7,6 +7,8 @@ namespace SysGadget.App
     /// <summary>The notification-area icon with Settings, Always on top and Exit.</summary>
     internal sealed class TrayController : IDisposable
     {
+        private const int NotificationMs = 10000; // Windows uses its own accessibility timeout; this is a hint
+
         private readonly NotifyIcon icon;
         private readonly ToolStripMenuItem topmostItem;
         private readonly ToolStripMenuItem thinItem;
@@ -56,6 +58,13 @@ namespace SysGadget.App
         public void ShowTopmostState(bool topmost)
         {
             topmostItem.Checked = topmost;
+        }
+
+        /// <summary>Shows a notification from the tray icon.</summary>
+        /// <param name="text">The message.</param>
+        public void Notify(string text)
+        {
+            icon.ShowBalloonTip(NotificationMs, "SysGadget", text, ToolTipIcon.Warning);
         }
 
         /// <summary>Removes the icon.</summary>

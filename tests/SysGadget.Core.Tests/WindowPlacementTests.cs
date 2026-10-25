@@ -46,5 +46,33 @@ namespace SysGadget.Core.Tests
 
             Assert.Equal(new Rectangle(0, 0, 4000, 1500), kept);
         }
+
+        [Fact]
+        public void ChooseMonitor_SavedMonitorConnected_IsUsed()
+        {
+            MonitorChoice choice = WindowPlacement.ChooseMonitor(1, 2, 0);
+
+            Assert.Equal(1, choice.Index);
+            Assert.False(choice.SavedMissing);
+        }
+
+        [Theory]
+        [InlineData(2)]  // the second monitor was unplugged
+        [InlineData(-1)] // a hand-edited settings file
+        public void ChooseMonitor_SavedMonitorGone_UsesThePrimary_AndSaysSo(int saved)
+        {
+            MonitorChoice choice = WindowPlacement.ChooseMonitor(saved, 2, 1);
+
+            Assert.Equal(1, choice.Index);
+            Assert.True(choice.SavedMissing);
+        }
+
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(2, 2)]
+        public void ChooseMonitor_NoMonitorOrBadPrimary_Throws(int count, int primary)
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => WindowPlacement.ChooseMonitor(0, count, primary));
+        }
     }
 }

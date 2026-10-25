@@ -42,5 +42,29 @@ namespace SysGadget.Core
                 error);
             File.AppendAllText(path, entry);
         }
+
+        /// <summary>
+        /// Appends one entry and says where it went, for a message to the user. A failure to write is
+        /// reported in the returned text, not hidden: the caller is already reporting another error.
+        /// </summary>
+        /// <param name="source">Where the exception was caught.</param>
+        /// <param name="error">The exception.</param>
+        /// <returns>"Written to &lt;path&gt;." or "The crash log could not be written: &lt;reason&gt;".</returns>
+        public string WriteAndDescribe(string source, Exception error)
+        {
+            try
+            {
+                Write(source, error);
+                return "Written to " + path + ".";
+            }
+            catch (IOException logError)
+            {
+                return "The crash log could not be written: " + logError.Message;
+            }
+            catch (UnauthorizedAccessException logError)
+            {
+                return "The crash log could not be written: " + logError.Message;
+            }
+        }
     }
 }

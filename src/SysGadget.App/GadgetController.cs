@@ -30,6 +30,7 @@ namespace SysGadget.App
         private readonly Replaceable<MeterSampler> samplers;
         private SettingsWindow? settingsWindow;
         private bool sampling;
+        private int? reportedMissingMonitor;
 
         /// <summary>Creates the gadget with loaded settings.</summary>
         /// <param name="store">Where the settings are saved.</param>
@@ -274,10 +275,22 @@ namespace SysGadget.App
             return Math.Max(1, (int)Math.Ceiling(content.DesiredSize.Height * scale));
         }
 
+        /// <summary>
+        /// The saved monitor, or the primary one when the saved one is not connected. The notice of
+        /// that comes once per missing monitor, not at every layout pass.
+        /// </summary>
         private Screen PickScreen()
         {
             Screen[] screens = Screen.AllScreens;
-            return settings.MonitorIndex < screens.Length ? screens[settings.MonitorIndex] : Screen.PrimaryScreen ?? screens[0];
+            int primary = Array.FindIndex(screens, s => s.Primary);
+            MonitorChoice choice = WindowPlacement.ChooseMonitor(settings.MonitorIndex, screens.Length, primary);
+            if (choice.SavedMissing && reportedMissingMonitor != settings.MonitorIndex)
+            {
+                tray.Notify("Monitor " + (settings.MonitorIndex + 1) + " is not connected; SysGadget is on the primary monitor. Pick a monitor in Settings.");
+            }
+
+            reportedMissingMonitor = choice.SavedMissing ? settings.MonitorIndex : (int?)null;
+            return screens[choice.Index];
         }
 
         private async void OnTick(object? sender, EventArgs e)
@@ -309,30 +322,12 @@ namespace SysGadget.App
             catch (Exception error)
             {
                 timer.Stop();
-                viewModel.Status = "Sampling error: " + error.Message + "\n" + Record(error) + "Open Settings and press Apply to retry.";
+                viewModel.Status = "Sampling error: " + error.Message + "\n" + crashLog.WriteAndDescribe("sampling", error) + "\nOpen Settings and press Apply to retry.";
             }
             finally
             {
                 samplers.Release(active); // disposes it now if the settings replaced it meanwhile
                 sampling = false;
-            }
-        }
-
-        /// <summary>Writes a sampling error to the crash log; a failure to write is reported in the text, not hidden.</summary>
-        private string Record(Exception error)
-        {
-            try
-            {
-                crashLog.Write("sampling", error);
-                return "Details in " + CrashLog.DefaultPath() + ".\n";
-            }
-            catch (System.IO.IOException logError)
-            {
-                return "The crash log could not be written: " + logError.Message + "\n";
-            }
-            catch (UnauthorizedAccessException logError)
-            {
-                return "The crash log could not be written: " + logError.Message + "\n";
             }
         }
 

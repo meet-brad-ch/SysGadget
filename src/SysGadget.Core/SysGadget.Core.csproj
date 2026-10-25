@@ -37,6 +37,7 @@
     <Compile Include="MeterRegistry.cs" />
     <Compile Include="MeterRow.cs" />
     <Compile Include="MeterRowBuilder.cs" />
+    <Compile Include="MonitorChoice.cs" />
     <Compile Include="MeterSampler.cs" />
     <Compile Include="NetworkProvider.cs" />
     <Compile Include="NetworkSample.cs" />
