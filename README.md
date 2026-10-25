@@ -4,7 +4,7 @@
 
 **Why:** Replaces the old Windows desktop gadgets that gave useful system information at a glance. Every group and item can be shown or hidden, and the dock edge and always-on-top are configurable.
 
-**Status:** working — CPU, memory, GPU (load, VRAM, temperature), storage, network, system and optional LibreHardwareMonitor temperatures; floating window (columns or stack) or docking (overlay, or reserving the edge); settings window; tray icon. No installer yet.
+**Status:** working — CPU (total, per core), memory, GPU (load, VRAM, temperature), storage (read, write and free space per drive), network (down, up against a set bandwidth), temperatures of all sensors (LibreHardwareMonitor, needs administrator rights) and system; floating window (columns or stack, thin bar) or docking (overlay, or reserving the edge); settings window; tray icon. No installer yet.
 
 ## How to run
 
@@ -23,10 +23,11 @@ dotnet test tests/SysGadget.App.Tests
 
 ## Use
 
-- Right-click the gadget or its tray icon: Settings, Always on top, Exit.
-- Drag the floating window by any part of it; its place is kept.
-- Thin bar (window or tray menu, or Settings): one line per group, showing the first visible item of each group. Order the items in the settings tree to choose which one.
-- Settings: dock edge (floating, left, right, top, bottom), monitor, width of a card (200 to 800), opacity, update interval, columns or stack for the floating window, reserve screen space when docked, compact core strip, and a tree of groups and items with checkboxes and Up/Down ordering.
+- Right-click the gadget or its tray icon: Settings, Always on top, Thin bar, Exit.
+- Drag the floating window by any part of it; it stops flush with the screen edges and its place is kept.
+- Double-click the gadget to switch between the cards and the thin bar (one line per group: the first ticked item of each group, marked "thin bar" in the settings tree).
+- Settings: position (floating, left, right, top, bottom), monitor, card width (200 to 800), opacity, always on top, thin bar, columns or stack (floating), reserve screen space (docked), update interval, network bandwidth in Mbit/s (a full Down/Up bar), cores as vertical bars, and a tree of groups and items: tick to show, drag to reorder (items stay in their group). Each drive has its own Read, Write and Free entries.
+- Temperatures: tick "All sensors" in the Temperatures group. The gadget asks to restart as administrator (LibreHardwareMonitor needs it) and asks again at start while the temperatures are on. Values turn amber near and red at the device's own limits (drive warning/critical, GPU slow-down/shut-down), else at 75/90 °C. CPU temperatures may be missing when Windows blocks LibreHardwareMonitor's driver.
 
 ## Layout
 
@@ -53,6 +54,9 @@ dotnet test tests/SysGadget.App.Tests
 - 2026-10-25 — Docking does not reserve the edge by default: Windows reserves an app bar's whole edge, which left half the strip empty; the overlay is only as tall as its cards.
 - 2026-10-25 — Default is a floating window with one column per group, centred at the top; the cards are coloured as a rainbow by position.
 - 2026-10-25 — No collapsing of groups: in columns a collapsed card stayed as an empty column; the thin bar replaces it.
+- 2026-10-25 — Per-instance items: a drive's Read, Write and Free are separate entries ("id|instance" keys), found at start and when Settings opens; retired item ids are dropped on load.
+- 2026-10-25 — Temperatures have one switch (the tree item); the elevation question is owned by an on-screen window; settings are saved before an elevated restart.
+- 2026-10-25 — Temperatures show no bar and no peak; colour comes from the device's own limits.
 
 ---
 
