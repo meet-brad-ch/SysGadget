@@ -20,6 +20,9 @@ Set-Location $root
 
 function Step([string]$text) { Write-Host "$(Get-Date -Format HH:mm:ss) $text" }
 function Run([string]$what, [scriptblock]$command) {
+    # git, gh and dotnet write progress and expected answers to stderr; Windows PowerShell 5.1 turns that
+    # into a terminating error under 'Stop', so here the exit code alone decides.
+    $ErrorActionPreference = 'Continue'
     & $command
     if ($LASTEXITCODE -ne 0) { throw "$what failed with exit code $LASTEXITCODE" }
 }
@@ -36,8 +39,8 @@ if (git status --porcelain) { throw 'The working tree is not clean: commit or re
 Run 'git fetch' { git fetch --quiet origin master --tags }
 if ((git rev-parse HEAD) -ne (git rev-parse origin/master)) { throw 'master is not in step with origin/master: push or pull first' }
 if (git tag --list $tag) { throw "Tag $tag exists already: raise the version in Directory.Build.props" }
-gh release view $tag *> $null
-if ($LASTEXITCODE -eq 0) { throw "GitHub release $tag exists already" }
+$releases = Run 'gh release list' { gh release list --limit 1000 --json tagName --jq '.[].tagName' }
+if ($releases -contains $tag) { throw "GitHub release $tag exists already" }
 
 Step '2/5 build and every test'
 Run 'dotnet build' { dotnet build SysGadget.slnx -c Release }
