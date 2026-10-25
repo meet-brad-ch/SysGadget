@@ -1,0 +1,14 @@
+LOG.md
+
+# build output
+bin/
+obj/
+publish/
+*.user
+
+# editor and OS junk
+.vs/
+.idea/
+*.suo
+Thumbs.db
+desktop.ini
