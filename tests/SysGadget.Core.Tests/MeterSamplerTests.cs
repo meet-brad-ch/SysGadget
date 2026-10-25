@@ -197,6 +197,27 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
+        public void Sample_ThinBar_ShowsTheChosenItem_NotTheFirst_WhileTheCardsKeepTheirOrder()
+        {
+            using (MeterSampler sampler = FakeSampler())
+            {
+                GadgetSettings settings = OnlyItems(MeterCatalog.Ram, MeterCatalog.Commit, MeterCatalog.DiskRead, MeterCatalog.DiskFree);
+                settings.SetThinItem(MeterCatalog.Commit);
+                settings.SetThinItem(ItemSetting.MakeKey(MeterCatalog.DiskFree, TwoDisks[1]));
+
+                GroupSection memoryCards = sampler.Sample(settings, Context).Single(s => s.Id == MeterCatalog.MemoryGroup);
+                settings.ThinBar = true;
+                IReadOnlyList<GroupSection> thin = sampler.Sample(settings, Context);
+
+                Assert.Equal("RAM", memoryCards.Rows[0].Label);
+                Assert.Equal("Commit", thin.Single(s => s.Id == MeterCatalog.MemoryGroup).Rows.Single().Label);
+                MeterRow disk = thin.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single();
+                Assert.EndsWith("Free", disk.Label);
+                Assert.Equal(TwoDisks[1], disk.Instance);
+            }
+        }
+
+        [Fact]
         public void Sample_TemperaturesWithoutSource_ShowTheReasonRow()
         {
             using (MeterSampler sampler = FakeSampler())

@@ -90,11 +90,16 @@ namespace SysGadget.Core
             return rows.Count > 0 && rows[0].Compact ? rows : rows.Take(1);
         }
 
-        /// <summary>The visible items of a group; in the thin bar only the first of them.</summary>
+        /// <summary>The visible items of a group; in the thin bar only its thin bar item.</summary>
         private static IEnumerable<ItemSetting> ShownItems(GroupSetting group, GadgetSettings settings)
         {
-            IEnumerable<ItemSetting> visible = group.Items.Where(i => i.Visible);
-            return settings.ThinBar ? visible.Take(1) : visible;
+            if (!settings.ThinBar)
+            {
+                return group.Items.Where(i => i.Visible);
+            }
+
+            ItemSetting? thin = group.ThinEntry();
+            return thin == null ? Enumerable.Empty<ItemSetting>() : new[] { thin };
         }
 
         private IReadOnlyList<MeterRow> ItemRows(string itemId, GadgetSettings settings, Dictionary<string, object> snapshots)

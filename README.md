@@ -40,7 +40,7 @@ CI (`.github/workflows/build.yml`) builds, tests and makes the installer on ever
 
 - Right-click the gadget or its tray icon: Settings, Always on top, Thin bar, Exit.
 - Drag the floating window by any part of it; it stops flush with the screen edges and its place is kept.
-- Double-click the gadget to switch between the cards and the thin bar (one line per group: the first ticked item of each group, marked "thin bar" in the settings tree).
+- Double-click the gadget to switch between the cards and the thin bar (one line per group). To choose which item a group shows in the thin bar, right-click the item in the Settings tree and choose "Show in thin bar"; without a choice it is the group's first ticked item. The tree marks it "thin bar". Unticking the chosen item clears the choice.
 - Settings: position (floating, left, right, top, bottom), monitor, card width (200 to 800), opacity, always on top, thin bar, columns or stack (floating), reserve screen space (docked), update interval, network bandwidth in Mbit/s (a full Down/Up bar), cores as vertical bars, and a tree of groups and items: tick to show, drag to reorder (items stay in their group). Each drive has its own Read, Write and Free entries.
 - Temperatures: tick "All sensors" in the Temperatures group. The gadget asks to restart as administrator (LibreHardwareMonitor needs it) and asks again at start while the temperatures are on. Values turn amber near and red at the device's own limits (drive warning/critical, GPU slow-down/shut-down), else at 75/90 °C. CPU temperatures may be missing when Windows blocks LibreHardwareMonitor's driver.
 
@@ -74,6 +74,7 @@ CI (`.github/workflows/build.yml`) builds, tests and makes the installer on ever
 - 2026-10-25 — Per-instance items: a drive's Read, Write and Free are separate entries ("id|instance" keys), found at start and when Settings opens; retired item ids are dropped on load.
 - 2026-10-25 — Temperatures have one switch (the tree item); the elevation question is owned by an on-screen window; settings are saved before an elevated restart.
 - 2026-10-25 — Temperatures show no bar and no peak; colour comes from the device's own limits.
+- 2026-10-25 — The thin bar item is a choice per group (`GroupSetting.ThinItem`), independent of the order of the cards; the chosen item is always ticked.
 - 2026-10-25 — Installer with Inno Setup on a self-contained publish (the ParaPad/PassKit pattern); release from the desk with `release.ps1` while the GitHub Actions quota is used up, CI on tags afterwards.
 
 ---

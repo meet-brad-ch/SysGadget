@@ -11,6 +11,10 @@
         Topmost="True">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="Visible" />
+        <!-- Right-click on an item row: choose the item the thin bar shows for its group. -->
+        <ContextMenu x:Key="ItemMenu" x:Shared="False">
+            <MenuItem Header="Show in thin bar" Click="OnShowInThinBar" />
+        </ContextMenu>
         <Style TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
@@ -104,7 +108,7 @@
 
         <TextBlock Style="{StaticResource SectionTitle}" Text="Groups and items" />
         <TextBlock TextWrapping="Wrap" Foreground="#555" Margin="0,0,0,6"
-                   Text="Tick what to show. Drag a group or an item to change the order; items stay in their group. The first ticked item of a group is the one the thin bar shows (marked)." />
+                   Text="Tick what to show. Drag a group or an item to change the order; items stay in their group. The thin bar shows one item per group (marked): right-click an item and choose Show in thin bar; without a choice it is the first ticked item." />
         <TreeView x:Name="MeterTree" Height="280" AllowDrop="True"
                   PreviewMouseLeftButtonDown="OnTreeMouseDown" PreviewMouseMove="OnTreeMouseMove"
                   DragOver="OnTreeDragOver" DragLeave="OnTreeDragLeave" Drop="OnTreeDrop">
@@ -118,6 +122,15 @@
                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Background="Transparent" Cursor="SizeAll" ToolTip="Drag to change the order"
                                 Tag="{x:Static local:SettingsWindow.RowTag}">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsGroup}" Value="False">
+                                    <Setter Property="ContextMenu" Value="{StaticResource ItemMenu}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
                     <Rectangle Style="{StaticResource LineBefore}" />
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#x2807;&#x2807;" Foreground="#999" Margin="0,0,4,0" />
@@ -136,7 +149,7 @@
                         </TextBlock>
                         <Border Margin="6,0,0,0" Padding="4,0" CornerRadius="3" Background="#DDEBFF"
                                 VerticalAlignment="Center"
-                                Visibility="{Binding IsFirstShown, Converter={StaticResource Visible}}">
+                                Visibility="{Binding IsThinItem, Converter={StaticResource Visible}}">
                             <TextBlock Text="thin bar" FontSize="10" Foreground="#1F4E8C" />
                         </Border>
                     </StackPanel>

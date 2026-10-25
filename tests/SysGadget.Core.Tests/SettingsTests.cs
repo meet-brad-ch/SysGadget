@@ -233,6 +233,50 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
+        public void ThinItem_AnyEntryCanBeChosen_WhereverItSits_ItIsTicked_AndCloneKeepsIt()
+        {
+            GadgetSettings settings = GadgetSettings.CreateDefault();
+            settings.SetItemVisible(MeterCatalog.Uptime, true); // Time and Uptime start unticked
+
+            Assert.Equal(MeterCatalog.Uptime, settings.ThinEntry(MeterCatalog.SystemGroup)!.Key); // no choice: the first ticked
+
+            settings.SetThinItem(MeterCatalog.Time);
+            settings.PlaceItem(MeterCatalog.Time, MeterCatalog.Uptime, true);
+            GadgetSettings copy = settings.Clone();
+
+            Assert.True(settings.IsItemVisible(MeterCatalog.Time));
+            Assert.Equal(MeterCatalog.Time, settings.ThinEntry(MeterCatalog.SystemGroup)!.Key);
+            Assert.Equal(MeterCatalog.Time, copy.ThinEntry(MeterCatalog.SystemGroup)!.Key);
+            Assert.Equal(MeterCatalog.CpuTotal, settings.ThinEntry(MeterCatalog.CpuGroup)!.Key); // other groups keep theirs
+        }
+
+        [Fact]
+        public void ThinItem_UntickingIt_ClearsTheChoice_TheFirstTickedTakesOver()
+        {
+            GadgetSettings settings = GadgetSettings.CreateDefault();
+            settings.SetThinItem(MeterCatalog.CpuCores);
+
+            settings.SetItemVisible(MeterCatalog.CpuCores, false);
+            settings.SetItemVisible(MeterCatalog.CpuCores, true);
+
+            Assert.Equal(string.Empty, settings.Groups.Single(g => g.Id == MeterCatalog.CpuGroup).ThinItem);
+            Assert.Equal(MeterCatalog.CpuTotal, settings.ThinEntry(MeterCatalog.CpuGroup)!.Key);
+        }
+
+        [Fact]
+        public void Validate_ThinItemUnknownOrUnticked_Throws()
+        {
+            GadgetSettings unknown = GadgetSettings.CreateDefault();
+            unknown.Groups.Single(g => g.Id == MeterCatalog.CpuGroup).ThinItem = MeterCatalog.Ram;
+            GadgetSettings unticked = GadgetSettings.CreateDefault();
+            unticked.SetItemVisible(MeterCatalog.CpuCores, false);
+            unticked.Groups.Single(g => g.Id == MeterCatalog.CpuGroup).ThinItem = MeterCatalog.CpuCores;
+
+            Assert.Throws<InvalidDataException>(() => unknown.Validate());
+            Assert.Throws<InvalidDataException>(() => unticked.Validate());
+        }
+
+        [Fact]
         public void Store_RoundTrip_KeepsEveryValue_AndWritesEdgeAsText()
         {
             string folder = TempFolder();
@@ -255,6 +299,7 @@ namespace SysGadget.Core.Tests
                 written.SetGroupVisible(MeterCatalog.GpuGroup, false);
                 written.PlaceGroup(MeterCatalog.SystemGroup, MeterCatalog.NetworkGroup, false);
                 written.PlaceItem(MeterCatalog.CpuCores, MeterCatalog.CpuTotal, false);
+                written.SetThinItem(MeterCatalog.Uptime);
                 new SettingsStore(file).Save(written);
 
                 GadgetSettings read = new SettingsStore(file).Load();
@@ -275,6 +320,7 @@ namespace SysGadget.Core.Tests
                 Assert.False(read.IsGroupVisible(MeterCatalog.GpuGroup));
                 Assert.Equal(written.Groups.Select(g => g.Id), read.Groups.Select(g => g.Id));
                 Assert.Equal(MeterCatalog.CpuCores, read.Groups.Single(g => g.Id == MeterCatalog.CpuGroup).Items[0].Id);
+                Assert.Equal(MeterCatalog.Uptime, read.ThinEntry(MeterCatalog.SystemGroup)!.Key);
             }
             finally
             {

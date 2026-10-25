@@ -104,6 +104,13 @@ namespace SysGadget.App
             RebuildTree(dragged.Id);
         }
 
+        /// <summary>The item menu's "Show in thin bar": the right-clicked item becomes its group's thin bar item.</summary>
+        private void OnShowInThinBar(object sender, RoutedEventArgs e)
+        {
+            SettingsTreeNode node = (SettingsTreeNode)((FrameworkElement)sender).DataContext;
+            node.ShowInThinBar();
+        }
+
         private void OnTreeMouseDown(object sender, MouseButtonEventArgs e)
         {
             DependencyObject? source = e.OriginalSource as DependencyObject;

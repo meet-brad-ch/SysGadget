@@ -27,10 +27,29 @@ namespace SysGadget.App
         }
 
         /// <summary>
-        /// True for the first checked item of its group: the item the thin bar shows. Moving or
-        /// checking items changes it, so the tree can mark it.
+        /// True for the item the thin bar shows: the one chosen for its group, else the first checked
+        /// one. Choosing, moving or checking items changes it, so the tree can mark it.
         /// </summary>
-        public bool IsFirstShown => parent != null && IsChecked && parent.Children.FirstOrDefault(c => c.IsChecked) == this;
+        public bool IsThinItem => parent != null && working.ThinEntry(parent.Id)?.Key == Id;
+
+        /// <summary>Makes this item the one the thin bar shows for its group, and checks it.</summary>
+        public void ShowInThinBar()
+        {
+            working.SetThinItem(Id);
+            Raise(nameof(IsChecked));
+            RaiseThinItemOfSiblings();
+        }
+
+        private void RaiseThinItemOfSiblings()
+        {
+            if (parent != null)
+            {
+                foreach (SettingsTreeNode sibling in parent.Children)
+                {
+                    sibling.Raise(nameof(IsThinItem));
+                }
+            }
+        }
 
         /// <summary>Group id, or the entry key of an item ("id", or "id|instance" for one disk).</summary>
         public string Id { get; }
@@ -60,13 +79,7 @@ namespace SysGadget.App
                 }
 
                 Raise(nameof(IsChecked));
-                if (parent != null)
-                {
-                    foreach (SettingsTreeNode sibling in parent.Children)
-                    {
-                        sibling.Raise(nameof(IsFirstShown));
-                    }
-                }
+                RaiseThinItemOfSiblings();
             }
         }
 

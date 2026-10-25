@@ -83,8 +83,8 @@ namespace SysGadget.Core
         }
 
         /// <summary>
-        /// Thin bar: each group shows only its first visible item, on one line with the group title.
-        /// The order of the items in a group decides which one that is.
+        /// Thin bar: each group shows one item, on one line with the group title: the item chosen for
+        /// the group (<see cref="SetThinItem"/>), else its first ticked item.
         /// </summary>
         public bool ThinBar { get; set; }
 
@@ -119,6 +119,7 @@ namespace SysGadget.Core
             {
                 Id = g.Id,
                 Visible = g.Visible,
+                ThinItem = g.ThinItem,
                 Items = g.Items.Select(i => new ItemSetting { Id = i.Id, Instance = i.Instance, Visible = i.Visible }).ToList(),
             }).ToList();
             return copy;
@@ -182,6 +183,27 @@ namespace SysGadget.Core
         public void SetItemVisible(string key, bool visible)
         {
             FindItem(key).Visible = visible;
+            GroupSetting group = GroupOfKey(key);
+            if (!visible && group.ThinItem == key)
+            {
+                group.ThinItem = string.Empty; // a hidden entry is not shown anywhere; the first ticked one takes over
+            }
+        }
+
+        /// <summary>The entry the thin bar shows for a group.</summary>
+        /// <param name="groupId">The group id.</param>
+        /// <returns>The chosen entry, else the first ticked one; null when none is ticked.</returns>
+        public ItemSetting? ThinEntry(string groupId)
+        {
+            return FindGroup(groupId).ThinEntry();
+        }
+
+        /// <summary>Makes an entry the one the thin bar shows for its group, and ticks it.</summary>
+        /// <param name="key">The entry key: an item id, or "id|instance" for one disk.</param>
+        public void SetThinItem(string key)
+        {
+            FindItem(key).Visible = true;
+            GroupOfKey(key).ThinItem = key;
         }
 
         /// <summary>Puts a group right before or after another group (a drag and drop).</summary>
@@ -237,6 +259,10 @@ namespace SysGadget.Core
             foreach (GroupSetting group in Groups)
             {
                 group.Items.RemoveAll(i => MeterCatalog.RetiredItemIds.Contains(i.Id));
+                if (MeterCatalog.RetiredItemIds.Contains(ItemSetting.ItemIdOf(group.ThinItem)))
+                {
+                    group.ThinItem = string.Empty;
+                }
             }
         }
 
@@ -265,6 +291,9 @@ namespace SysGadget.Core
                         : "Item '" + item.Id + "' has no instances, but '" + item.Instance + "' is given.");
                 Require(seen.Add(item.Key), "Item '" + item.Key + "' is listed twice.");
             }
+
+            Require(group.ThinItem.Length == 0 || group.Items.Any(i => i.Key == group.ThinItem && i.Visible),
+                "Thin bar item '" + group.ThinItem + "' of group '" + group.Id + "' is not a ticked item of the group.");
         }
 
         private void AddMissing()
@@ -307,9 +336,14 @@ namespace SysGadget.Core
             return group ?? throw new KeyNotFoundException("Group '" + groupId + "' is not in the settings.");
         }
 
+        private GroupSetting GroupOfKey(string key)
+        {
+            return FindGroup(MeterCatalog.GroupOf(ItemSetting.ItemIdOf(key)).Id);
+        }
+
         private ItemSetting FindItem(string key)
         {
-            GroupSetting group = FindGroup(MeterCatalog.GroupOf(ItemSetting.ItemIdOf(key)).Id);
+            GroupSetting group = GroupOfKey(key);
             ItemSetting? item = group.Items.FirstOrDefault(i => string.Equals(i.Key, key, StringComparison.Ordinal));
             return item ?? throw new KeyNotFoundException("Item '" + key + "' is not in the settings.");
         }

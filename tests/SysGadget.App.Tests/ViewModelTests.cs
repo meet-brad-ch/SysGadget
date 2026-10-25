@@ -145,7 +145,27 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
-        public void SettingsTreeNode_IsFirstShown_MarksTheFirstTickedItem_AndFollowsTheTicks()
+        public void SettingsTreeNode_ShowInThinBar_MovesTheMarkToAnyItem_AndTicksIt()
+        {
+            GadgetSettings working = GadgetSettings.CreateDefault();
+            List<SettingsTreeNode> tree = SettingsTreeNode.Build(working, new HashSet<string>(), null);
+            SettingsTreeNode memory = tree.Single(n => n.Id == MeterCatalog.MemoryGroup);
+            SettingsTreeNode ram = memory.Children.Single(c => c.Id == MeterCatalog.Ram);
+            SettingsTreeNode commit = memory.Children.Single(c => c.Id == MeterCatalog.Commit);
+            List<string> raised = new List<string>();
+            ram.PropertyChanged += (sender, args) => raised.Add(args.PropertyName!);
+
+            commit.ShowInThinBar();
+
+            Assert.True(commit.IsChecked);
+            Assert.True(commit.IsThinItem);
+            Assert.False(ram.IsThinItem);
+            Assert.Contains(nameof(SettingsTreeNode.IsThinItem), raised);
+            Assert.Equal(MeterCatalog.Commit, working.ThinEntry(MeterCatalog.MemoryGroup)!.Key);
+        }
+
+        [Fact]
+        public void SettingsTreeNode_IsThinItem_MarksTheFirstTickedItem_AndFollowsTheTicks()
         {
             GadgetSettings working = GadgetSettings.CreateDefault();
             List<SettingsTreeNode> tree = SettingsTreeNode.Build(working, new HashSet<string>(), null);
@@ -155,14 +175,14 @@ namespace SysGadget.App.Tests
             List<string> raised = new List<string>();
             cores.PropertyChanged += (sender, args) => raised.Add(args.PropertyName!);
 
-            Assert.True(total.IsFirstShown);
-            Assert.False(cores.IsFirstShown);
-            Assert.False(cpu.IsFirstShown);
+            Assert.True(total.IsThinItem);
+            Assert.False(cores.IsThinItem);
+            Assert.False(cpu.IsThinItem);
 
             total.IsChecked = false;
 
-            Assert.True(cores.IsFirstShown);
-            Assert.Contains(nameof(SettingsTreeNode.IsFirstShown), raised);
+            Assert.True(cores.IsThinItem);
+            Assert.Contains(nameof(SettingsTreeNode.IsThinItem), raised);
         }
 
         [Fact]
@@ -199,12 +219,12 @@ namespace SysGadget.App.Tests
 
             Assert.Equal(new[] { "1 C: Read", "1 C: Write", "1 C: Free" }, storage.Children.Select(c => c.Title));
             Assert.True(storage.Children[0].Accepts(storage.Children[2]));
-            Assert.True(storage.Children[0].IsFirstShown);
+            Assert.True(storage.Children[0].IsThinItem);
 
             storage.Children[0].IsChecked = false;
 
             Assert.False(working.IsItemVisible("storage.read|1 C:"));
-            Assert.True(storage.Children[1].IsFirstShown);
+            Assert.True(storage.Children[1].IsThinItem);
         }
 
         [Fact]
