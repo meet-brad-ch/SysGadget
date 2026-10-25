@@ -1,0 +1,79 @@
+name: build
+
+# Builds and tests SysGadget, publishes it self-contained for win-x64, and makes the installer with Inno Setup.
+# Every run keeps the installer as an artifact; a tag v1.2.3 also makes a release with it (or, when release.ps1
+# already released it from the desk, replaces the setup on that release with the CI-built one).
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # the SDK that opens .slnx and builds net10.0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -match '^v(\d+)\.(\d+)\.(\d+)$') {
+            $v = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
+            $n = "$v.0"
+          } else {
+            $v = "0.0.0-ci.$env:GITHUB_RUN_NUMBER"
+            $n = "0.0.0.$env:GITHUB_RUN_NUMBER"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "number=$n" >> $env:GITHUB_OUTPUT
+
+      - name: Build
+        run: dotnet build SysGadget.slnx -c Release
+
+      # Tests marked Category=Hardware need a real GPU, an NVIDIA driver or two disks, which the runner has
+      # not; they run at the desk (release.ps1 runs every test).
+      - name: Test
+        run: dotnet test SysGadget.slnx -c Release --no-build --filter "Category!=Hardware"
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress | Out-Host
+          }
+          ./build-installer.ps1 -Version "${{ steps.version.outputs.version }}" -NumVersion "${{ steps.version.outputs.number }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SysGadget-Setup-${{ steps.version.outputs.version }}
+          path: out/installer/SysGadget-Setup-${{ steps.version.outputs.version }}.exe
+          if-no-files-found: error
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $setup = "out/installer/SysGadget-Setup-${{ steps.version.outputs.version }}.exe"
+          gh release view $env:GITHUB_REF_NAME *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME $setup --clobber
+          } else {
+            gh release create $env:GITHUB_REF_NAME $setup `
+              --title "SysGadget ${{ steps.version.outputs.version }}" `
+              --notes "The installer of SysGadget ${{ steps.version.outputs.version }} (self-contained, no .NET needed)."
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

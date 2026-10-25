@@ -7,6 +7,7 @@ namespace SysGadget.Core.Tests
     /// <summary>Reads the real NVIDIA GPUs of the machine running the tests (it has one).</summary>
     public class NvmlTemperatureProviderTests
     {
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void Read_GivesAPlausibleTemperaturePerGpu_WithItsNameAndLimits()
         {

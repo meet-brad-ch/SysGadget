@@ -4,6 +4,7 @@ LOG.md
 bin/
 obj/
 publish/
+out/
 *.user
 
 # editor and OS junk

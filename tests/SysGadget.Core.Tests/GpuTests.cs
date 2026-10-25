@@ -55,6 +55,7 @@ namespace SysGadget.Core.Tests
             Assert.Equal(0.0, none.MemoryPercent, 6);
         }
 
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void DxgiAdapterEnumerator_ListsAtLeastOneNamedAdapter()
         {
@@ -68,6 +69,7 @@ namespace SysGadget.Core.Tests
             }
         }
 
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void GpuCounterProvider_Read_ReturnsOneSamplePerAdapter_InRange()
         {

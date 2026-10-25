@@ -39,6 +39,7 @@ namespace SysGadget.Core.Tests
             return settings;
         }
 
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void Sample_Defaults_GivesCpuMemoryGpu_InOrder_TotalAsTheFirstCpuRow()
         {
@@ -61,6 +62,7 @@ namespace SysGadget.Core.Tests
             }
         }
 
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void Sample_EveryItemVisible_EveryGroupHasRows()
         {
@@ -77,6 +79,7 @@ namespace SysGadget.Core.Tests
             }
         }
 
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -94,6 +97,7 @@ namespace SysGadget.Core.Tests
             }
         }
 
+        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void Sample_DiskEntries_DefaultReadWriteFreePerDisk_EachEntryShowsItsOwnRow_AndTheThinBarTheFirst()
         {

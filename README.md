@@ -4,7 +4,11 @@
 
 **Why:** Replaces the old Windows desktop gadgets that gave useful system information at a glance. Every group and item can be shown or hidden, and the dock edge and always-on-top are configurable.
 
-**Status:** working — CPU (total, per core), memory, GPU (load, VRAM, temperature), storage (read, write and free space per drive), network (down, up against a set bandwidth), temperatures of all sensors (LibreHardwareMonitor, needs administrator rights) and system; floating window (columns or stack, thin bar) or docking (overlay, or reserving the edge); settings window; tray icon. No installer yet.
+**Status:** working — CPU (total, per core), memory, GPU (load, VRAM, temperature), storage (read, write and free space per drive), network (down, up against a set bandwidth), temperatures of all sensors (LibreHardwareMonitor, needs administrator rights) and system; floating window (columns or stack, thin bar) or docking (overlay, or reserving the edge); settings window; tray icon; start with Windows; installer.
+
+## Install
+
+Run `SysGadget-Setup-<version>.exe` from the GitHub release. The setup asks whether SysGadget starts with Windows (ticked by default); Settings has the same switch ("Start SysGadget with Windows", the `SysGadget` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`). The installed app is self-contained: no .NET runtime is needed.
 
 ## How to run
 
@@ -21,6 +25,17 @@ dotnet test tests/SysGadget.App.Tests
 
 **Files at run time:** `%APPDATA%\SysGadget\settings.json` (settings), `%APPDATA%\SysGadget\crash.log` (written only on a crash).
 
+## Build the installer
+
+`.\build-installer.ps1` publishes the app self-contained for win-x64 and compiles `installer\SysGadget.iss` with Inno Setup (6 or 7). The setup lands in `out\installer\`; the script prints its path and SHA-256. The version comes from `Directory.Build.props`.
+
+## Release
+
+1. Raise `<Version>` in `Directory.Build.props`, commit and push to master.
+2. Run `.\release.ps1`. It stops before tagging when master is not clean and in step with origin, or when the tag or release exists. It builds, runs every test (the Hardware ones too), builds the installer, pushes the annotated tag `v<version>` and creates the GitHub release with the setup and its SHA-256.
+
+CI (`.github/workflows/build.yml`) builds, tests and makes the installer on every push; on a `v*` tag it uploads the setup to the release (creating it when missing). CI leaves out tests marked `Category=Hardware` (real GPU, NVIDIA driver, two disks). Until the Actions quota is available again, releases are made from the desk with `release.ps1`.
+
 ## Use
 
 - Right-click the gadget or its tray icon: Settings, Always on top, Thin bar, Exit.
@@ -35,6 +50,8 @@ dotnet test tests/SysGadget.App.Tests
 - `src/SysGadget.LibreHardware/` — optional temperature source on LibreHardwareMonitorLib.
 - `src/SysGadget.App/` — WPF app: window, docking (AppBar), tray icon, settings window.
 - `tests/SysGadget.Core.Tests/`, `tests/SysGadget.App.Tests/` — xUnit tests; some read the real counters of the machine.
+- `installer/SysGadget.iss`, `build-installer.ps1`, `release.ps1`, `.github/workflows/build.yml` — installer and release.
+- `Directory.Build.props` — the one version of all projects.
 - `nuget.config` — clears the global feed, uses nuget.org only.
 
 ## Adding an item
@@ -57,6 +74,7 @@ dotnet test tests/SysGadget.App.Tests
 - 2026-10-25 — Per-instance items: a drive's Read, Write and Free are separate entries ("id|instance" keys), found at start and when Settings opens; retired item ids are dropped on load.
 - 2026-10-25 — Temperatures have one switch (the tree item); the elevation question is owned by an on-screen window; settings are saved before an elevated restart.
 - 2026-10-25 — Temperatures show no bar and no peak; colour comes from the device's own limits.
+- 2026-10-25 — Installer with Inno Setup on a self-contained publish (the ParaPad/PassKit pattern); release from the desk with `release.ps1` while the GitHub Actions quota is used up, CI on tags afterwards.
 
 ---
 
