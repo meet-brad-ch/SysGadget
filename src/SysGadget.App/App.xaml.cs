@@ -43,7 +43,7 @@ namespace SysGadget.App
                 return;
             }
 
-            controller = new GadgetController(store, settings);
+            controller = new GadgetController(store, settings, crashLog);
             controller.ExitRequested += () => Shutdown(0);
             controller.Start();
         }

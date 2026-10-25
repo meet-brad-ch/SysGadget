@@ -18,24 +18,27 @@ namespace SysGadget.App
         private const int ContentPaddingDip = 16;
 
         private readonly SettingsStore store;
+        private readonly CrashLog crashLog;
         private readonly GadgetViewModel viewModel = new GadgetViewModel();
         private readonly GadgetWindow window;
         private readonly TrayController tray = new TrayController();
         private readonly DispatcherTimer timer = new DispatcherTimer();
         private readonly AppBarDocker docker;
         private GadgetSettings settings;
-        private MeterSampler sampler;
+        private readonly Replaceable<MeterSampler> samplers;
         private SettingsWindow? settingsWindow;
         private bool sampling;
 
         /// <summary>Creates the gadget with loaded settings.</summary>
         /// <param name="store">Where the settings are saved.</param>
         /// <param name="settings">The settings in force.</param>
-        public GadgetController(SettingsStore store, GadgetSettings settings)
+        /// <param name="crashLog">Where sampling errors are written.</param>
+        public GadgetController(SettingsStore store, GadgetSettings settings, CrashLog crashLog)
         {
             this.store = store;
+            this.crashLog = crashLog;
             this.settings = settings;
-            sampler = CreateSampler();
+            samplers = new Replaceable<MeterSampler>(CreateSampler());
             window = new GadgetWindow(viewModel);
             window.CreateHandle();
             docker = new AppBarDocker(window.Source);
@@ -73,7 +76,7 @@ namespace SysGadget.App
             timer.Stop();
             docker.Dispose();
             tray.Dispose();
-            sampler.Dispose();
+            samplers.Dispose();
             window.Close();
         }
 
@@ -92,8 +95,7 @@ namespace SysGadget.App
 
             settings = next;
             store.Save(settings);
-            sampler.Dispose();
-            sampler = CreateSampler();
+            samplers.Replace(CreateSampler()); // a sample still running finishes on the old one
             timer.Interval = TimeSpan.FromMilliseconds(settings.IntervalMs);
             window.ShowTopmostState(settings.AlwaysOnTop);
             tray.ShowTopmostState(settings.AlwaysOnTop);
@@ -192,9 +194,18 @@ namespace SysGadget.App
 
             window.UpdateLayout();
             double widthPx = window.ActualWidth * scale;
+            double heightPx = window.ActualHeight * scale;
             double defaultLeft = settings.Horizontal ? area.Left + ((area.Width - widthPx) / 2) : area.Right - widthPx - FloatingMarginPx;
-            window.Left = (settings.FloatingLeft ?? defaultLeft) / scale;
-            window.Top = (settings.FloatingTop ?? area.Top + FloatingMarginPx) / scale;
+            Rectangle wanted = new Rectangle(
+                (int)Math.Round(settings.FloatingLeft ?? defaultLeft),
+                (int)Math.Round(settings.FloatingTop ?? area.Top + FloatingMarginPx),
+                (int)Math.Ceiling(widthPx),
+                (int)Math.Ceiling(heightPx));
+
+            // A saved place may lie off screen (monitor removed, window grew): keep it on its monitor.
+            Rectangle kept = WindowPlacement.KeepInside(wanted, Screen.FromRectangle(wanted).WorkingArea);
+            window.Left = kept.Left / scale;
+            window.Top = kept.Top / scale;
         }
 
         /// <summary>Against the edge, only as tall as the cards, reserving no screen space.</summary>
@@ -255,13 +266,13 @@ namespace SysGadget.App
             }
 
             sampling = true;
+            MeterSampler active = samplers.Acquire();
             try
             {
                 GadgetSettings snapshot = settings;
-                MeterSampler active = sampler;
                 System.Collections.Generic.IReadOnlyList<GroupSection> sections = await Task.Run(
                     () => active.Sample(snapshot, new SampleContext(DateTime.Now, TimeSpan.FromMilliseconds(Environment.TickCount64))));
-                if (!ReferenceEquals(active, sampler))
+                if (!ReferenceEquals(active, samplers.Current))
                 {
                     return; // the settings changed while sampling; the next tick uses the new sampler
                 }
@@ -276,11 +287,30 @@ namespace SysGadget.App
             catch (Exception error)
             {
                 timer.Stop();
-                viewModel.Status = "Sensor error: " + error.Message + "\nOpen Settings and press Apply to retry.";
+                viewModel.Status = "Sampling error: " + error.Message + "\n" + Record(error) + "Open Settings and press Apply to retry.";
             }
             finally
             {
+                samplers.Release(active); // disposes it now if the settings replaced it meanwhile
                 sampling = false;
+            }
+        }
+
+        /// <summary>Writes a sampling error to the crash log; a failure to write is reported in the text, not hidden.</summary>
+        private string Record(Exception error)
+        {
+            try
+            {
+                crashLog.Write("sampling", error);
+                return "Details in " + CrashLog.DefaultPath() + ".\n";
+            }
+            catch (System.IO.IOException logError)
+            {
+                return "The crash log could not be written: " + logError.Message + "\n";
+            }
+            catch (UnauthorizedAccessException logError)
+            {
+                return "The crash log could not be written: " + logError.Message + "\n";
             }
         }
 

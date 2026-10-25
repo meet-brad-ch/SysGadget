@@ -75,6 +75,23 @@ namespace SysGadget.Core.Tests
             }
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Sample_EveryItemVisible_ThinOrNot_TwoSamplesWork(bool thin)
+        {
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            {
+                GadgetSettings settings = OnlyItems(MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id).ToArray());
+                settings.ThinBar = thin;
+
+                sampler.Sample(settings, Context);
+                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
+
+                Assert.Equal(MeterCatalog.Groups.Count, sections.Count);
+            }
+        }
+
         [Fact]
         public void Sample_HiddenGroup_AndGroupWithoutVisibleItems_AreLeftOut()
         {

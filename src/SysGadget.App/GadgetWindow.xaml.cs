@@ -1,8 +1,11 @@
 using System;
+using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using SysGadget.Core;
+using Screen = System.Windows.Forms.Screen;
 
 namespace SysGadget.App
 {
@@ -11,6 +14,16 @@ namespace SysGadget.App
     {
         private const int GwlExStyle = -20;
         private const int WsExToolWindow = 0x00000080;
+        private const int WmMoving = 0x0216;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeRect
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
 
         [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
         private static extern IntPtr GetWindowLongPtr(IntPtr window, int index);
@@ -35,7 +48,7 @@ namespace SysGadget.App
         /// <summary>Raised with the new state when the user toggles Always on top in the context menu.</summary>
         public event Action<bool>? TopmostToggled;
 
-        /// <summary>Raised with the new state when the user toggles Thin bar in the context menu.</summary>
+        /// <summary>Raised with the new state when the user toggles the thin bar (menu or double-click).</summary>
         public event Action<bool>? ThinToggled;
 
         /// <summary>Raised after the user dragged the window to a new place.</summary>
@@ -54,6 +67,7 @@ namespace SysGadget.App
             Source = HwndSource.FromHwnd(handle)!;
             long style = GetWindowLongPtr(handle, GwlExStyle).ToInt64();
             SetWindowLongPtr(handle, GwlExStyle, new IntPtr(style | WsExToolWindow)); // keeps it out of Alt+Tab
+            Source.AddHook(OnMessage);
         }
 
         /// <summary>Shows the current Always on top state in the context menu.</summary>
@@ -71,11 +85,37 @@ namespace SysGadget.App
         }
 
         /// <summary>
-        /// A press anywhere drags a floating window. The position is saved only when the window
-        /// really moved, so a plain click does not pin a never-dragged window to its place.
+        /// Keeps a dragged window inside the work area of the monitor it is mostly on: Windows sends
+        /// the proposed rectangle before every move, and the rectangle is moved back inside.
+        /// </summary>
+        private IntPtr OnMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (message != WmMoving || !DragEnabled)
+            {
+                return IntPtr.Zero;
+            }
+
+            NativeRect proposed = Marshal.PtrToStructure<NativeRect>(lParam);
+            Rectangle rectangle = Rectangle.FromLTRB(proposed.Left, proposed.Top, proposed.Right, proposed.Bottom);
+            Rectangle kept = WindowPlacement.KeepInside(rectangle, Screen.FromRectangle(rectangle).WorkingArea);
+            Marshal.StructureToPtr(
+                new NativeRect { Left = kept.Left, Top = kept.Top, Right = kept.Right, Bottom = kept.Bottom }, lParam, false);
+            handled = true;
+            return new IntPtr(1);
+        }
+
+        /// <summary>
+        /// A double-click switches between the cards and the thin bar. A single press drags a floating
+        /// window; the position is saved only when the window really moved.
         /// </summary>
         private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ClickCount == 2)
+            {
+                ThinToggled?.Invoke(!ThinItem.IsChecked);
+                return;
+            }
+
             if (!DragEnabled)
             {
                 return;

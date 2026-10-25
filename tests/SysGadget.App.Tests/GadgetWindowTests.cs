@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using SysGadget.Core;
@@ -9,6 +10,55 @@ namespace SysGadget.App.Tests
 {
     public class GadgetWindowTests
     {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeRect
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
+
+        /// <summary>Windows asks the window before every drag step; an off-screen place comes back flush with the work area.</summary>
+        [Fact]
+        public void Moving_PastTheScreenEdge_IsPushedBackFlush()
+        {
+            StaRunner.Run(() =>
+            {
+                GadgetWindow window = new GadgetWindow(new GadgetViewModel());
+                window.CreateHandle();
+                window.DragEnabled = true;
+                System.Drawing.Rectangle area = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
+                NativeRect proposed = new NativeRect
+                {
+                    Left = area.Left - 300,
+                    Top = area.Top - 50,
+                    Right = area.Left - 300 + 1280,
+                    Bottom = area.Top - 50 + 44,
+                };
+                IntPtr buffer = Marshal.AllocHGlobal(Marshal.SizeOf<NativeRect>());
+                try
+                {
+                    Marshal.StructureToPtr(proposed, buffer, false);
+                    SendMessage(window.Source.Handle, 0x0216, IntPtr.Zero, buffer); // WM_MOVING
+                    NativeRect kept = Marshal.PtrToStructure<NativeRect>(buffer);
+
+                    Assert.Equal(area.Left, kept.Left);
+                    Assert.Equal(area.Top, kept.Top);
+                    Assert.Equal(1280, kept.Right - kept.Left);
+                    Assert.Equal(44, kept.Bottom - kept.Top);
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(buffer);
+                    window.Close();
+                }
+            });
+        }
+
         /// <summary>
         /// Regression: ProgressBar.Value bound two-way by default to the read-only RowViewModel.Percent,
         /// which threw a XamlParseException as soon as the first row was laid out and crashed the gadget.

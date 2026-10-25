@@ -21,6 +21,7 @@
     <Compile Include="RegistryTests.cs" />
     <Compile Include="RowBuilderTests.cs" />
     <Compile Include="SettingsTests.cs" />
+    <Compile Include="WindowPlacementTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
