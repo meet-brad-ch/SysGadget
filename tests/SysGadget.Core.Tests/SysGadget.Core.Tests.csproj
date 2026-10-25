@@ -13,7 +13,9 @@
     <Compile Include="CpuCounterProviderTests.cs" />
     <Compile Include="GpuTests.cs" />
     <Compile Include="MemoryProviderTests.cs" />
+    <Compile Include="MeterSamplerTests.cs" />
     <Compile Include="ProcessorInstanceNameTests.cs" />
+    <Compile Include="RowBuilderTests.cs" />
     <Compile Include="SettingsTests.cs" />
   </ItemGroup>
 

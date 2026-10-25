@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SysGadget.Core/SysGadget.Core.csproj" />
+    <Project Path="src/SysGadget.LibreHardware/SysGadget.LibreHardware.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SysGadget.Core.Tests/SysGadget.Core.Tests.csproj" />

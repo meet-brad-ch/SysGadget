@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ByteFormat.cs" />
     <Compile Include="CategoryRateReader.cs" />
     <Compile Include="CoreLoad.cs" />
     <Compile Include="CpuCounterProvider.cs" />
@@ -25,6 +26,10 @@
     <Compile Include="MemorySample.cs" />
     <Compile Include="MeterCatalog.cs" />
     <Compile Include="MeterDefinition.cs" />
+    <Compile Include="MeterRow.cs" />
+    <Compile Include="MeterRowBuilder.cs" />
+    <Compile Include="MeterSampler.cs" />
+    <Compile Include="MeterSection.cs" />
     <Compile Include="MeterSetting.cs" />
     <Compile Include="NetworkProvider.cs" />
     <Compile Include="NetworkSample.cs" />

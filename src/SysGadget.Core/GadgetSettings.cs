@@ -29,6 +29,12 @@ namespace SysGadget.Core
         /// <summary>Zero-based index of the monitor, in the order Windows lists them.</summary>
         public int MonitorIndex { get; set; }
 
+        /// <summary>Left position of a floating window in screen pixels; null places it at the top right.</summary>
+        public double? FloatingLeft { get; set; }
+
+        /// <summary>Top position of a floating window in screen pixels; null places it at the top right.</summary>
+        public double? FloatingTop { get; set; }
+
         /// <summary>Keep the gadget above other windows.</summary>
         public bool AlwaysOnTop { get; set; } = true;
 
