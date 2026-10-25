@@ -104,18 +104,18 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Temperatures_NameTheDevice_ShowThePeak_NoBar_AndUseTheDriveLimitsInsteadOfShowingThem()
+        public void Temperatures_NameTheDevice_NoBar_AndUseTheDriveLimitsInsteadOfShowingThem()
         {
             IReadOnlyList<MeterRow> rows = MeterRowBuilder.Temperatures(new[]
             {
-                new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU Hot Spot", 60.0, 66.0),
-                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Composite", 72.4, 73.0),
+                new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU Hot Spot", 60.0),
+                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Composite", 72.4),
                 new TemperatureReading("Samsung SSD 990 PRO 2TB", "Warning Temperature", 81.0),
                 new TemperatureReading("Samsung SSD 990 PRO 2TB", "Critical Temperature", 84.0),
             });
 
             Assert.Equal(new[] { "RTX 4090 Hot Spot", "990 PRO Composite" }, rows.Select(r => r.Label));
-            Assert.Equal("60 °C (max 66)", rows[0].ValueText);
+            Assert.Equal("60 °C", rows[0].ValueText);
             Assert.All(rows, r => Assert.False(r.HasBar));
             Assert.Equal(AlertLevel.Normal, rows[0].Alert); // no limits: below the fixed 75 °C
             Assert.Equal(AlertLevel.Warning, rows[1].Alert); // 72 °C is within 10 °C of the drive's 81 °C warning limit
@@ -138,17 +138,52 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Disks_GiveABusyBarRow_ThenARatesTextRow()
+        public void Disks_WithoutSpace_GiveABusyBarRow_ThenARatesTextRow()
         {
-            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("1 c:", 40.0, 1024, 0) });
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("2", 40.0, 1024, 0) });
 
             Assert.Equal(2, rows.Count);
-            Assert.Equal("1 c:", rows[0].Label);
+            Assert.Equal("2", rows[0].Label);
             Assert.Equal("40 %", rows[0].ValueText);
             Assert.True(rows[0].HasBar);
             Assert.Equal("R 1.0 KB/s  W 0 B/s", rows[1].ValueText);
             Assert.False(rows[1].HasBar);
-            Assert.All(rows, r => Assert.Equal("1 c:", r.Instance));
+            Assert.All(rows, r => Assert.Equal("2", r.Instance));
+        }
+
+        [Fact]
+        public void Disks_WithSpace_PutTheUsedSpaceFirst_UnderTheDiskName_ThenActive_ThenRates()
+        {
+            DiskSpace space = new DiskSpace(1000UL << 30, 750UL << 30);
+
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("1 C:", 40.0, 1024, 0, space) });
+
+            Assert.Equal(new[] { "1 C:", "Active", string.Empty }, rows.Select(r => r.Label));
+            Assert.Equal("250 / 1000 GB", rows[0].ValueText);
+            Assert.Equal(25.0, rows[0].Percent, 6);
+            Assert.Equal("40 %", rows[1].ValueText);
+            Assert.All(rows, r => Assert.Equal("1 C:", r.Instance));
+        }
+
+        [Theory]
+        [InlineData("1 C:", new[] { "C:" })]
+        [InlineData("0 D: e:", new[] { "D:", "E:" })]
+        [InlineData("2", new string[0])]
+        public void DriveLettersOf_ReadsTheLettersInADiskName(string diskName, string[] expected)
+        {
+            Assert.Equal(expected, DiskSpace.DriveLettersOf(diskName));
+        }
+
+        [Fact]
+        public void DiskSpace_OfTheSystemDisk_IsPlausible()
+        {
+            string system = System.IO.Path.GetPathRoot(System.Environment.SystemDirectory)!.Substring(0, 2);
+
+            DiskSpace? space = DiskSpace.Of("9 " + system);
+
+            Assert.NotNull(space);
+            Assert.True(space!.TotalBytes > space.FreeBytes);
+            Assert.InRange(space.UsedPercent, 0.0, 100.0);
         }
 
         [Fact]
@@ -166,16 +201,16 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void GpuTemperature_LabelsTempForOneGpu_ShortNamesForMore_ShowsThePeak_AndUsesTheGpuLimits()
+        public void GpuTemperature_LabelsTempForOneGpu_ShortNamesForMore_AndUsesTheGpuLimits()
         {
-            TemperatureReading rtx = new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU", 54.0, 61.0, 88.0, 96.0);
-            TemperatureReading hot = new TemperatureReading("NVIDIA GeForce RTX 3060", "GPU", 96.0, 97.0, 88.0, 96.0);
+            TemperatureReading rtx = new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU", 54.0, 88.0, 96.0);
+            TemperatureReading hot = new TemperatureReading("NVIDIA GeForce RTX 3060", "GPU", 96.0, 88.0, 96.0);
 
             MeterRow single = MeterRowBuilder.GpuTemperature(new[] { rtx })[0];
             IReadOnlyList<MeterRow> two = MeterRowBuilder.GpuTemperature(new[] { rtx, hot });
 
             Assert.Equal("Temp", single.Label);
-            Assert.Equal("54 °C (max 61)", single.ValueText);
+            Assert.Equal("54 °C", single.ValueText);
             Assert.False(single.HasBar);
             Assert.Equal(AlertLevel.Normal, single.Alert);
             Assert.Equal("RTX 4090", two[0].Label);

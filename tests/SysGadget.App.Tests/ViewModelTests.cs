@@ -74,7 +74,7 @@ namespace SysGadget.App.Tests
         {
             GadgetViewModel view = new GadgetViewModel { SectionWidth = 224 };
 
-            Assert.Equal(119.0, view.TextLabelMaxWidth, 6);
+            Assert.Equal(134.0, view.TextLabelMaxWidth, 6);
             Assert.True(view.TextLabelMaxWidth > view.LabelMaxWidth);
         }
 
@@ -83,7 +83,7 @@ namespace SysGadget.App.Tests
         {
             RowViewModel row = new RowViewModel();
 
-            row.Update(new MeterRow("990 PRO Composite", "72 °C (max 73)", 0.0, false, false, string.Empty, AlertLevel.Warning));
+            row.Update(new MeterRow("990 PRO Composite", "72 °C", 0.0, false, false, string.Empty, AlertLevel.Warning));
             Assert.Equal(1, row.Level);
 
             row.Update(new MeterRow("Total", "95 %", 95.0, true));

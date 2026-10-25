@@ -41,7 +41,7 @@ namespace SysGadget.Core
         private const int SlowdownThreshold = 1; // NVML_TEMPERATURE_THRESHOLD_SLOWDOWN
         private const int NotSupported = 3; // NVML_ERROR_NOT_SUPPORTED
 
-        /// <summary>One GPU: its handle, name, limits and the highest temperature read so far.</summary>
+        /// <summary>One GPU: its handle, name and limits.</summary>
         private sealed class Gpu
         {
             public Gpu(IntPtr handle, string name, double? slowdown, double? shutdown)
@@ -59,8 +59,6 @@ namespace SysGadget.Core
             public double? Slowdown { get; }
 
             public double? Shutdown { get; }
-
-            public double Max { get; set; } = double.MinValue;
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -118,8 +116,8 @@ namespace SysGadget.Core
 
         /// <summary>Reads the core temperature of every NVIDIA GPU.</summary>
         /// <returns>
-        /// One reading per GPU: the hardware name is the GPU name, the sensor name "GPU"; with the peak
-        /// since this provider opened and the slow-down (warning) and shut-down (critical) limits.
+        /// One reading per GPU: the hardware name is the GPU name, the sensor name "GPU"; with the
+        /// slow-down (warning) and shut-down (critical) limits.
         /// </returns>
         /// <exception cref="InvalidOperationException">An NVML call failed.</exception>
         public IReadOnlyList<TemperatureReading> Read()
@@ -128,8 +126,7 @@ namespace SysGadget.Core
             foreach (Gpu gpu in gpus)
             {
                 Check(GetTemperature(gpu.Handle, GpuSensor, out uint celsius), "nvmlDeviceGetTemperature");
-                gpu.Max = Math.Max(gpu.Max, celsius);
-                readings.Add(new TemperatureReading(gpu.Name, "GPU", celsius, gpu.Max, gpu.Slowdown, gpu.Shutdown));
+                readings.Add(new TemperatureReading(gpu.Name, "GPU", celsius, gpu.Slowdown, gpu.Shutdown));
             }
 
             return readings;

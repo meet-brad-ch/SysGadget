@@ -154,7 +154,7 @@ namespace SysGadget.Core
         {
             return new MeterRow(
                 label,
-                Degrees(reading.Celsius) + " (max " + reading.MaxCelsius.ToString("0", CultureInfo.InvariantCulture) + ")",
+                Degrees(reading.Celsius),
                 0.0,
                 false,
                 false,
@@ -186,18 +186,31 @@ namespace SysGadget.Core
             return new MeterRow(label, ByteFormat.Rate(bytesPerSecond), percent, true);
         }
 
-        /// <summary>Busy time per disk, with the rates on a second line.</summary>
+        /// <summary>Space, busy time and rates per disk.</summary>
         /// <param name="samples">The disk samples.</param>
         /// <returns>
-        /// Two rows per disk, both tagged with the disk as their instance: the busy bar, then the read
-        /// and write rates without a bar.
+        /// Per disk, all tagged with the disk as their instance: the used space ("412 / 931 GB", bar =
+        /// share used) under the disk's name, then "Active" (busy bar), then the read and write rates
+        /// without a bar. A disk without a drive letter has no space row; its busy row carries the name.
         /// </returns>
         public static IReadOnlyList<MeterRow> Disks(IReadOnlyList<DiskSample> samples)
         {
-            List<MeterRow> rows = new List<MeterRow>(samples.Count * 2);
+            List<MeterRow> rows = new List<MeterRow>(samples.Count * 3);
             foreach (DiskSample sample in samples)
             {
-                rows.Add(new MeterRow(sample.Name, PercentText(sample.BusyPercent), sample.BusyPercent, true, false, sample.Name));
+                if (sample.Space != null)
+                {
+                    rows.Add(new MeterRow(
+                        sample.Name,
+                        ByteFormat.Pair(sample.Space.UsedBytes, sample.Space.TotalBytes),
+                        sample.Space.UsedPercent,
+                        true,
+                        false,
+                        sample.Name));
+                }
+
+                string busyLabel = sample.Space != null ? "Active" : sample.Name;
+                rows.Add(new MeterRow(busyLabel, PercentText(sample.BusyPercent), sample.BusyPercent, true, false, sample.Name));
                 rows.Add(new MeterRow(
                     string.Empty,
                     "R " + ByteFormat.Rate(sample.ReadBytesPerSecond) + "  W " + ByteFormat.Rate(sample.WriteBytesPerSecond),

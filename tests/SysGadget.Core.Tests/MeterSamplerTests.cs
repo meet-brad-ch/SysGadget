@@ -204,7 +204,7 @@ namespace SysGadget.Core.Tests
                 MeterRow row = sampler.Sample(settings, Context).Single().Rows.Single();
 
                 Assert.Equal(1, created);
-                Assert.Equal("55 °C (max 55)", row.ValueText);
+                Assert.Equal("55 °C", row.ValueText);
                 Assert.Equal(0, fake.Disposed);
 
                 settings.SetItemVisible(MeterCatalog.Temperatures, false);

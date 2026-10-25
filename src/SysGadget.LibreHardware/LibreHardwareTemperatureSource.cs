@@ -49,8 +49,7 @@ namespace SysGadget.LibreHardware
             {
                 if (sensor.SensorType == SensorType.Temperature && sensor.Value.HasValue)
                 {
-                    // Max is LibreHardwareMonitor's highest value since the monitor opened
-                    readings.Add(new TemperatureReading(hardware.Name, sensor.Name, sensor.Value.Value, sensor.Max));
+                    readings.Add(new TemperatureReading(hardware.Name, sensor.Name, sensor.Value.Value));
                 }
             }
 

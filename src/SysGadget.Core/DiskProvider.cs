@@ -53,7 +53,7 @@ namespace SysGadget.Core
 
                 reads.TryGetValue(busy.Key, out double readRate);
                 writes.TryGetValue(busy.Key, out double writeRate);
-                result.Add(new DiskSample(busy.Key, Math.Max(0.0, Math.Min(100.0, busy.Value)), readRate, writeRate));
+                result.Add(new DiskSample(busy.Key, Math.Max(0.0, Math.Min(100.0, busy.Value)), readRate, writeRate, DiskSpace.Of(busy.Key)));
             }
 
             result.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));

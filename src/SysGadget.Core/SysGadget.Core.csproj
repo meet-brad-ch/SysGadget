@@ -16,6 +16,7 @@
     <Compile Include="CrashLog.cs" />
     <Compile Include="DiskProvider.cs" />
     <Compile Include="DiskSample.cs" />
+    <Compile Include="DiskSpace.cs" />
     <Compile Include="DockEdge.cs" />
     <Compile Include="DxgiAdapterEnumerator.cs" />
     <Compile Include="GadgetSettings.cs" />
