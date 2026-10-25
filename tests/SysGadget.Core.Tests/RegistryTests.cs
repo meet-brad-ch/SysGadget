@@ -29,15 +29,19 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void FindInstances_ListsThisMachinesDisks_AsSpelledByTheSampler()
+        public void FindInstances_ListsReadWriteFreePerDisk_DiskByDisk_AsSpelledByTheSampler()
         {
             IReadOnlyList<InstanceRef> found = new MeterRegistry(null, false).FindInstances();
+            List<string> disks = new DiskProvider().Read().Select(d => d.Name).OrderBy(n => n, System.StringComparer.Ordinal).ToList();
 
-            Assert.NotEmpty(found);
-            Assert.All(found, f => Assert.Equal(MeterCatalog.Disks, f.ItemId));
-            Assert.Equal(
-                new DiskProvider().Read().Select(d => d.Name).OrderBy(n => n, System.StringComparer.Ordinal),
-                found.Select(f => f.Instance));
+            Assert.Equal(disks.Count * 3, found.Count);
+            for (int i = 0; i < disks.Count; i++)
+            {
+                Assert.Equal(
+                    new[] { MeterCatalog.DiskRead, MeterCatalog.DiskWrite, MeterCatalog.DiskFree },
+                    found.Skip(i * 3).Take(3).Select(f => f.ItemId));
+                Assert.All(found.Skip(i * 3).Take(3), f => Assert.Equal(disks[i], f.Instance));
+            }
         }
 
         [Fact]

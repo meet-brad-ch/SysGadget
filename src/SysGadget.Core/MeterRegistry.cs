@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SysGadget.Core
 {
@@ -31,20 +32,36 @@ namespace SysGadget.Core
             this.nvidiaInstalled = nvidiaInstalled;
             AddSources();
             AddItems();
-            instanceLists[MeterCatalog.Disks] = DiskProvider.InstanceNames;
+            instanceLists[MeterCatalog.DiskRead] = DiskProvider.InstanceNames;
+            instanceLists[MeterCatalog.DiskWrite] = DiskProvider.InstanceNames;
+            instanceLists[MeterCatalog.DiskFree] = DiskProvider.InstanceNames;
             CheckCoverage();
         }
 
         /// <summary>Lists the instances of every per-instance item on this machine now, without sampling.</summary>
-        /// <returns>One reference per instance, for example per disk.</returns>
+        /// <returns>
+        /// One reference per instance and item, by instance first and then in catalogue order, so new
+        /// entries arrive as "disk 0: read, write, free; disk 1: read, write, free".
+        /// </returns>
         public IReadOnlyList<InstanceRef> FindInstances()
         {
-            List<InstanceRef> found = new List<InstanceRef>();
+            Dictionary<string, IReadOnlyList<string>> listed = new Dictionary<string, IReadOnlyList<string>>();
+            List<string> instances = new List<string>();
             foreach (KeyValuePair<string, Func<IReadOnlyList<string>>> list in instanceLists)
             {
-                foreach (string instance in list.Value())
+                listed[list.Key] = list.Value();
+                instances.AddRange(listed[list.Key].Where(i => !instances.Contains(i)));
+            }
+
+            List<InstanceRef> found = new List<InstanceRef>();
+            foreach (string instance in instances)
+            {
+                foreach (ItemDefinition item in MeterCatalog.Groups.SelectMany(g => g.Items).Where(i => i.PerInstance))
                 {
-                    found.Add(new InstanceRef(list.Key, instance));
+                    if (listed[item.Id].Contains(instance))
+                    {
+                        found.Add(new InstanceRef(item.Id, instance));
+                    }
                 }
             }
 
@@ -134,7 +151,9 @@ namespace SysGadget.Core
             Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuLoad, (gpus, s) => MeterRowBuilder.GpuLoad(gpus));
             Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuMemory, (gpus, s) => MeterRowBuilder.GpuMemory(gpus));
             Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.GpuTemperature, (readings, s) => MeterRowBuilder.GpuTemperature(readings));
-            Add<IReadOnlyList<DiskSample>>(MeterCatalog.Disks, (disks, s) => MeterRowBuilder.Disks(disks));
+            Add<IReadOnlyList<DiskSample>>(MeterCatalog.DiskRead, (disks, s) => MeterRowBuilder.DiskRead(disks));
+            Add<IReadOnlyList<DiskSample>>(MeterCatalog.DiskWrite, (disks, s) => MeterRowBuilder.DiskWrite(disks));
+            Add<IReadOnlyList<DiskSample>>(MeterCatalog.DiskFree, (disks, s) => MeterRowBuilder.DiskFree(disks));
             Add<IReadOnlyList<NetworkSample>>(MeterCatalog.NetworkRates, (network, s) => MeterRowBuilder.Network(network, s.NetworkMbit));
             Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.Temperatures, (readings, s) => MeterRowBuilder.Temperatures(readings));
             Add<SampleContext>(MeterCatalog.Time, (context, s) => MeterRowBuilder.Time(context.Now));

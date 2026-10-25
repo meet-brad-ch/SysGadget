@@ -159,31 +159,40 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Disks_WithoutSpace_KeepTheSameThreeRows_WithNoVolumeOnTheNameRow()
+        public void DiskReadAndWrite_OneRowPerDisk_NamedByDrive_NoBar_TaggedWithTheDisk()
         {
-            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("0 D:", 1024, 0) });
+            DiskSample[] disks = { new DiskSample("0 D:", 1024, 0), new DiskSample("2", 0, 2048) };
 
-            Assert.Equal(new[] { "0 D:", "Read", "Write" }, rows.Select(r => r.Label));
-            Assert.Equal("no volume", rows[0].ValueText);
-            Assert.False(rows[0].HasBar);
-            Assert.Equal("1.0 KB/s", rows[1].ValueText);
-            Assert.Equal("0 B/s", rows[2].ValueText);
-            Assert.All(rows.Skip(1), r => Assert.False(r.HasBar));
-            Assert.All(rows, r => Assert.Equal("0 D:", r.Instance));
+            IReadOnlyList<MeterRow> reads = MeterRowBuilder.DiskRead(disks);
+            IReadOnlyList<MeterRow> writes = MeterRowBuilder.DiskWrite(disks);
+
+            Assert.Equal(new[] { "D: Read", "Disk 2 Read" }, reads.Select(r => r.Label));
+            Assert.Equal("1.0 KB/s", reads[0].ValueText);
+            Assert.Equal(new[] { "D: Write", "Disk 2 Write" }, writes.Select(r => r.Label));
+            Assert.Equal("2.0 KB/s", writes[1].ValueText);
+            Assert.All(reads.Concat(writes), r => Assert.False(r.HasBar));
+            Assert.Equal(new[] { "0 D:", "2" }, reads.Select(r => r.Instance));
         }
 
         [Fact]
-        public void Disks_WithSpace_PutTheUsedSpaceFirst_UnderTheDiskName_ThenReadAndWriteOnTheirOwnRows()
+        public void DiskFree_ShowsFreeOfTotal_WithTheUsedShareAsBar_OrNoVolume()
         {
             DiskSpace space = new DiskSpace(1000UL << 30, 750UL << 30);
 
-            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("1 C:", 1024, 2048, space) });
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.DiskFree(new[]
+            {
+                new DiskSample("1 C:", 0, 0, space),
+                new DiskSample("0 D:", 0, 0),
+            });
 
-            Assert.Equal(new[] { "1 C:", "Read", "Write" }, rows.Select(r => r.Label));
-            Assert.Equal("250 / 1000 GB", rows[0].ValueText);
+            Assert.Equal("C: Free", rows[0].Label);
+            Assert.Equal("750 GB of 1000 GB", rows[0].ValueText);
             Assert.Equal(25.0, rows[0].Percent, 6);
-            Assert.Equal("2.0 KB/s", rows[2].ValueText);
-            Assert.All(rows, r => Assert.Equal("1 C:", r.Instance));
+            Assert.True(rows[0].HasBar);
+            Assert.Equal("D: Free", rows[1].Label);
+            Assert.Equal("no volume", rows[1].ValueText);
+            Assert.False(rows[1].HasBar);
+            Assert.Equal(new[] { "1 C:", "0 D:" }, rows.Select(r => r.Instance));
         }
 
         [Theory]

@@ -73,8 +73,20 @@ namespace SysGadget.Core
         /// <summary>Id of the storage group.</summary>
         public const string StorageGroup = "storage";
 
-        /// <summary>Id of the disk activity item; one settings entry per disk.</summary>
-        public const string Disks = "storage.disks";
+        /// <summary>Id of the disk read-rate item; one settings entry per disk.</summary>
+        public const string DiskRead = "storage.read";
+
+        /// <summary>Id of the disk write-rate item; one settings entry per disk.</summary>
+        public const string DiskWrite = "storage.write";
+
+        /// <summary>Id of the disk free-space item; one settings entry per disk.</summary>
+        public const string DiskFree = "storage.free";
+
+        /// <summary>
+        /// Ids of items that no longer exist; settings entries with them are dropped on load
+        /// ("storage.disks" was one entry per disk before read, write and free were split).
+        /// </summary>
+        public static IReadOnlyList<string> RetiredItemIds { get; } = new[] { "storage.disks" };
 
         /// <summary>Id of the network group.</summary>
         public const string NetworkGroup = "network";
@@ -118,7 +130,9 @@ namespace SysGadget.Core
             }),
             new GroupDefinition(StorageGroup, "Storage", new[]
             {
-                new ItemDefinition(Disks, "Disk", Sources.Disk, true, perInstance: true),
+                new ItemDefinition(DiskRead, "Read", Sources.Disk, true, perInstance: true),
+                new ItemDefinition(DiskWrite, "Write", Sources.Disk, true, perInstance: true),
+                new ItemDefinition(DiskFree, "Free", Sources.Disk, true, perInstance: true),
             }),
             new GroupDefinition(NetworkGroup, "Network", new[]
             {

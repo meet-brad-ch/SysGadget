@@ -222,21 +222,21 @@ namespace SysGadget.Core
             Require(Opacity >= MinOpacity && Opacity <= 1.0, "Opacity must be " + MinOpacity + " to 1.");
             Require(MonitorIndex >= 0, "MonitorIndex must not be negative.");
             Require(NetworkMbit >= 1 && NetworkMbit <= MaxNetworkMbit, "Network bandwidth must be 1 to " + MaxNetworkMbit + " Mbit/s.");
-            DropSingleInstanceEntries();
+            DropRetiredEntries();
             ValidateGroups();
             AddMissing();
         }
 
         /// <summary>
-        /// Files written before disks had one entry each hold a single entry without an instance for
-        /// the disk item; it is dropped and the disks get their own entries when found.
+        /// Older files hold entries of items that were replaced (<see cref="MeterCatalog.RetiredItemIds"/>,
+        /// for example one "storage.disks" entry per disk before read, write and free were split); they
+        /// are dropped, and the disks get their new entries when found.
         /// </summary>
-        private void DropSingleInstanceEntries()
+        private void DropRetiredEntries()
         {
             foreach (GroupSetting group in Groups)
             {
-                group.Items.RemoveAll(i => i.Instance.Length == 0
-                    && MeterCatalog.Groups.SelectMany(g => g.Items).Any(d => d.Id == i.Id && d.PerInstance));
+                group.Items.RemoveAll(i => MeterCatalog.RetiredItemIds.Contains(i.Id));
             }
         }
 

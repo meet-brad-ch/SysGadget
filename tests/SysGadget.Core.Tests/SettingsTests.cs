@@ -70,47 +70,61 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void AddInstances_AddsEachDiskOnce_AtTheEnd_WithTheItemDefault()
+        public void AddInstances_AddsEachEntryOnce_AtTheEnd_InTheOrderGiven_WithTheItemDefault()
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
-            InstanceRef[] disks = { new InstanceRef(MeterCatalog.Disks, "0 D:"), new InstanceRef(MeterCatalog.Disks, "1 C:") };
+            InstanceRef[] found =
+            {
+                new InstanceRef(MeterCatalog.DiskRead, "0 D:"),
+                new InstanceRef(MeterCatalog.DiskWrite, "0 D:"),
+                new InstanceRef(MeterCatalog.DiskFree, "0 D:"),
+                new InstanceRef(MeterCatalog.DiskRead, "1 C:"),
+            };
 
-            Assert.True(settings.AddInstances(disks));
-            Assert.False(settings.AddInstances(disks));
+            Assert.True(settings.AddInstances(found));
+            Assert.False(settings.AddInstances(found));
 
             GroupSetting storage = settings.Groups.Single(g => g.Id == MeterCatalog.StorageGroup);
-            Assert.Equal(new[] { "storage.disks|0 D:", "storage.disks|1 C:" }, storage.Items.Select(i => i.Key));
-            Assert.True(settings.IsItemVisible("storage.disks|1 C:"));
+            Assert.Equal(
+                new[] { "storage.read|0 D:", "storage.write|0 D:", "storage.free|0 D:", "storage.read|1 C:" },
+                storage.Items.Select(i => i.Key));
+            Assert.True(settings.IsItemVisible("storage.free|0 D:"));
 
-            settings.PlaceItem("storage.disks|1 C:", "storage.disks|0 D:", false);
-            Assert.Equal("1 C:", storage.Items[0].Instance);
+            settings.PlaceItem("storage.read|1 C:", "storage.read|0 D:", false);
+            Assert.Equal("storage.read|1 C:", storage.Items[0].Key);
         }
 
         [Fact]
-        public void Validate_DropsTheOldSingleDiskEntry_AndRefusesBadInstances()
+        public void Validate_DropsRetiredDiskEntries_AndRefusesBadInstances()
         {
             GadgetSettings old = GadgetSettings.CreateDefault();
-            old.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items.Add(new ItemSetting { Id = MeterCatalog.Disks, Visible = true });
+            List<ItemSetting> oldStorage = old.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items;
+            oldStorage.Add(new ItemSetting { Id = "storage.disks", Visible = true });
+            oldStorage.Add(new ItemSetting { Id = "storage.disks", Instance = "1 C:", Visible = true });
             GadgetSettings instanceOnPlainItem = GadgetSettings.CreateDefault();
             instanceOnPlainItem.Groups[0].Items[0].Instance = "x";
             GadgetSettings repeatedDisk = GadgetSettings.CreateDefault();
-            repeatedDisk.AddInstances(new[] { new InstanceRef(MeterCatalog.Disks, "0 D:") });
+            repeatedDisk.AddInstances(new[] { new InstanceRef(MeterCatalog.DiskRead, "0 D:") });
             repeatedDisk.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items
-                .Add(new ItemSetting { Id = MeterCatalog.Disks, Instance = "0 D:", Visible = true });
+                .Add(new ItemSetting { Id = MeterCatalog.DiskRead, Instance = "0 D:", Visible = true });
+            GadgetSettings diskWithoutInstance = GadgetSettings.CreateDefault();
+            diskWithoutInstance.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items
+                .Add(new ItemSetting { Id = MeterCatalog.DiskFree, Visible = true });
 
             old.Validate();
 
             Assert.Empty(old.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items);
             Assert.Throws<InvalidDataException>(() => instanceOnPlainItem.Validate());
             Assert.Throws<InvalidDataException>(() => repeatedDisk.Validate());
+            Assert.Throws<InvalidDataException>(() => diskWithoutInstance.Validate());
         }
 
         [Fact]
         public void ItemSetting_Keys_JoinAndSplit()
         {
             Assert.Equal("cpu.total", ItemSetting.MakeKey("cpu.total", string.Empty));
-            Assert.Equal("storage.disks|1 C:", ItemSetting.MakeKey("storage.disks", "1 C:"));
-            Assert.Equal("storage.disks", ItemSetting.ItemIdOf("storage.disks|1 C:"));
+            Assert.Equal("storage.read|1 C:", ItemSetting.MakeKey("storage.read", "1 C:"));
+            Assert.Equal("storage.read", ItemSetting.ItemIdOf("storage.read|1 C:"));
             Assert.Equal("cpu.total", ItemSetting.ItemIdOf("cpu.total"));
         }
 

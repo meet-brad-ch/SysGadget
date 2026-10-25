@@ -116,7 +116,8 @@ namespace SysGadget.App
                 };
                 foreach (ItemSetting item in group.Items)
                 {
-                    string title = MeterCatalog.GetItem(item.Id).Title + (item.Instance.Length > 0 ? " " + item.Instance : string.Empty);
+                    string itemTitle = MeterCatalog.GetItem(item.Id).Title;
+                    string title = item.Instance.Length > 0 ? item.Instance + " " + itemTitle : itemTitle; // "1 C: Read"
                     node.Children.Add(new SettingsTreeNode(working, item.Key, title, false, node)
                     {
                         IsSelected = item.Key == selectedId,

@@ -95,29 +95,32 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Sample_DiskEntries_ShowOnlyTheirDisk_InTheirOrder_AndTheThinBarShowsTheFirstShownDisk()
+        public void Sample_DiskEntries_DefaultReadWriteFreePerDisk_EachEntryShowsItsOwnRow_AndTheThinBarTheFirst()
         {
             using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, false)))
             {
-                GadgetSettings settings = OnlyItems(MeterCatalog.Disks);
-                List<ItemSetting> disks = settings.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items;
-                Assert.True(disks.Count >= 2, "this test needs a machine with two disks");
-                string first = disks[0].Instance;
-                string second = disks[1].Instance;
-                settings.PlaceItem(disks[1].Key, disks[0].Key, false); // second disk first
-                settings.SetItemVisible(ItemSetting.MakeKey(MeterCatalog.Disks, first), false);
+                GadgetSettings settings = OnlyItems(MeterCatalog.DiskRead, MeterCatalog.DiskWrite, MeterCatalog.DiskFree);
+                List<ItemSetting> entries = settings.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items;
+                Assert.True(entries.Count >= 6, "this test needs a machine with two disks");
+                string first = entries[0].Instance;
+                Assert.Equal(
+                    new[] { MeterCatalog.DiskRead, MeterCatalog.DiskWrite, MeterCatalog.DiskFree },
+                    entries.Take(3).Select(e => e.Id)); // read, write, free for each disk
+                Assert.All(entries.Take(3), e => Assert.Equal(first, e.Instance));
 
                 GroupSection storage = sampler.Sample(settings, Context).Single();
 
-                Assert.All(storage.Rows, r => Assert.Equal(second, r.Instance));
-                Assert.Equal(second, storage.Rows[0].Label);
+                Assert.Equal(entries.Count, storage.Rows.Count); // one row per entry
+                Assert.Equal(entries.Select(e => e.Instance), storage.Rows.Select(r => r.Instance));
+                Assert.EndsWith("Read", storage.Rows[0].Label);
+                Assert.EndsWith("Free", storage.Rows[2].Label);
 
-                settings.SetItemVisible(ItemSetting.MakeKey(MeterCatalog.Disks, first), true);
+                settings.SetItemVisible(entries[0].Key, false);
                 settings.ThinBar = true;
                 MeterRow thin = sampler.Sample(settings, Context).Single().Rows.Single();
 
-                Assert.Equal(second, thin.Instance);
-                Assert.True(thin.HasBar);
+                Assert.EndsWith("Write", thin.Label);
+                Assert.Equal(first, thin.Instance);
             }
         }
 
@@ -155,7 +158,7 @@ namespace SysGadget.Core.Tests
             using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.CpuTotal, MeterCatalog.CpuCores, MeterCatalog.Ram, MeterCatalog.Commit,
-                    MeterCatalog.Time, MeterCatalog.Uptime, MeterCatalog.NetworkRates, MeterCatalog.Disks);
+                    MeterCatalog.Time, MeterCatalog.Uptime, MeterCatalog.NetworkRates, MeterCatalog.DiskFree);
                 settings.ThinBar = true;
                 settings.PlaceItem(MeterCatalog.Commit, MeterCatalog.Ram, false);
                 settings.PlaceItem(MeterCatalog.Uptime, MeterCatalog.Time, false);
@@ -166,8 +169,7 @@ namespace SysGadget.Core.Tests
                 Assert.Equal("Commit", sections.Single(s => s.Id == MeterCatalog.MemoryGroup).Rows.Single().Label);
                 Assert.Equal("Uptime", sections.Single(s => s.Id == MeterCatalog.SystemGroup).Rows.Single().Label);
                 Assert.Equal("Down", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().Label);
-                MeterRow disk = sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single();
-                Assert.Equal(disk.Instance, disk.Label); // the first disk's name line (space, or "no volume")
+                Assert.EndsWith("Free", sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single().Label);
 
                 settings.UseCompactCores = true;
                 settings.PlaceItem(MeterCatalog.CpuCores, MeterCatalog.CpuTotal, false);

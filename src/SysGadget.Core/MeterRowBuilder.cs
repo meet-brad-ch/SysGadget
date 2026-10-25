@@ -188,37 +188,56 @@ namespace SysGadget.Core
             return new MeterRow(label, ByteFormat.Rate(bytesPerSecond), percent, true);
         }
 
-        /// <summary>Space, busy time and rates per disk.</summary>
+        /// <summary>Read rate per disk; each row is its own settings entry (one per disk).</summary>
+        /// <param name="samples">The disk samples.</param>
+        /// <returns>One row per disk without a bar, "C: Read  1.2 MB/s", tagged with the disk.</returns>
+        public static IReadOnlyList<MeterRow> DiskRead(IReadOnlyList<DiskSample> samples)
+        {
+            return samples
+                .Select(s => new MeterRow(DriveLabel(s.Name) + " Read", ByteFormat.Rate(s.ReadBytesPerSecond), 0.0, false, false, s.Name))
+                .ToList();
+        }
+
+        /// <summary>Write rate per disk; each row is its own settings entry (one per disk).</summary>
+        /// <param name="samples">The disk samples.</param>
+        /// <returns>One row per disk without a bar, "C: Write  0 B/s", tagged with the disk.</returns>
+        public static IReadOnlyList<MeterRow> DiskWrite(IReadOnlyList<DiskSample> samples)
+        {
+            return samples
+                .Select(s => new MeterRow(DriveLabel(s.Name) + " Write", ByteFormat.Rate(s.WriteBytesPerSecond), 0.0, false, false, s.Name))
+                .ToList();
+        }
+
+        /// <summary>Free space per disk; each row is its own settings entry (one per disk).</summary>
         /// <param name="samples">The disk samples.</param>
         /// <returns>
-        /// Three rows per disk, the same for every disk, all tagged with the disk as their instance: the
-        /// disk's name with the used space ("412 / 931 GB", bar = share used) or "no volume" without a
-        /// bar when Windows reads no volume on it; then "Read" and "Write", each rate on its own row
-        /// so neither value shifts when the other changes length.
+        /// One row per disk tagged with the disk: "C: Free  658 GB of 3.6 TB" with a bar of the used share
+        /// (as Explorer draws drives, so a nearly full drive turns amber or red); "no volume" without a
+        /// bar when Windows reads no volume on the disk.
         /// </returns>
-        public static IReadOnlyList<MeterRow> Disks(IReadOnlyList<DiskSample> samples)
+        public static IReadOnlyList<MeterRow> DiskFree(IReadOnlyList<DiskSample> samples)
         {
-            List<MeterRow> rows = new List<MeterRow>(samples.Count * 3);
-            foreach (DiskSample sample in samples)
-            {
-                rows.Add(sample.Space != null
+            return samples.Select(s => s.Space != null
                     ? new MeterRow(
-                        sample.Name,
-                        ByteFormat.Pair(sample.Space.UsedBytes, sample.Space.TotalBytes),
-                        sample.Space.UsedPercent,
+                        DriveLabel(s.Name) + " Free",
+                        ByteFormat.Size(s.Space.FreeBytes) + " of " + ByteFormat.Size(s.Space.TotalBytes),
+                        s.Space.UsedPercent,
                         true,
                         false,
-                        sample.Name)
-                    : new MeterRow(sample.Name, "no volume", 0.0, false, false, sample.Name));
-                rows.Add(new MeterRow("Read", ByteFormat.Rate(sample.ReadBytesPerSecond), 0.0, false, false, sample.Name));
-                rows.Add(new MeterRow("Write", ByteFormat.Rate(sample.WriteBytesPerSecond), 0.0, false, false, sample.Name));
-            }
+                        s.Name)
+                    : new MeterRow(DriveLabel(s.Name) + " Free", "no volume", 0.0, false, false, s.Name))
+                .ToList();
+        }
 
-            return rows;
+        /// <summary>The drive letters of a disk ("C:"), or its number when it has none ("Disk 2").</summary>
+        private static string DriveLabel(string diskName)
+        {
+            IReadOnlyList<string> letters = DiskSpace.DriveLettersOf(diskName);
+            return letters.Count > 0 ? string.Join(" ", letters) : "Disk " + diskName;
         }
 
         /// <summary>
-        /// Temperatures with their peaks, no bars. Drives report their alarm limits as sensors
+        /// Temperatures, no bars. Drives report their alarm limits as sensors
         /// ("Warning Temperature", "Critical Temperature"); those are not shown as rows but used as the
         /// limits of the other sensors of the same device.
         /// </summary>
