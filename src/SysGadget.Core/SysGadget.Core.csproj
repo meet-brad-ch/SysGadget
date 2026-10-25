@@ -20,6 +20,7 @@
     <Compile Include="GpuCounterProvider.cs" />
     <Compile Include="GpuInstanceName.cs" />
     <Compile Include="GpuSample.cs" />
+    <Compile Include="ITemperatureSource.cs" />
     <Compile Include="MemoryProvider.cs" />
     <Compile Include="MemorySample.cs" />
     <Compile Include="MeterCatalog.cs" />
@@ -30,6 +31,7 @@
     <Compile Include="ProcessorInstanceName.cs" />
     <Compile Include="RateSnapshot.cs" />
     <Compile Include="SettingsStore.cs" />
+    <Compile Include="TemperatureReading.cs" />
   </ItemGroup>
 
   <ItemGroup>
