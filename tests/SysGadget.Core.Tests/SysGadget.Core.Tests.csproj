@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ActivityProviderTests.cs" />
     <Compile Include="CpuCounterProviderTests.cs" />
     <Compile Include="GpuTests.cs" />
     <Compile Include="MemoryProviderTests.cs" />

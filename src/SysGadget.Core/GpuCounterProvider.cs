@@ -17,17 +17,16 @@ namespace SysGadget.Core
         private const string DedicatedCounter = "Dedicated Usage";
 
         private readonly IReadOnlyList<GpuAdapterInfo> adapters;
-        private readonly PerformanceCounterCategory engines = new PerformanceCounterCategory(EngineCategory);
-        private readonly PerformanceCounterCategory memory = new PerformanceCounterCategory(MemoryCategory);
-        private Dictionary<string, CounterSample> previous = new Dictionary<string, CounterSample>();
+        private readonly CategoryRateReader engines;
+        private readonly PerformanceCounterCategory memory;
 
         /// <summary>Lists the adapters and takes the baseline sample.</summary>
         /// <exception cref="InvalidOperationException">The counter sets or adapters are missing.</exception>
         public GpuCounterProvider()
         {
-            if (!PerformanceCounterCategory.Exists(EngineCategory) || !PerformanceCounterCategory.Exists(MemoryCategory))
+            if (!PerformanceCounterCategory.Exists(MemoryCategory))
             {
-                throw new InvalidOperationException("The GPU performance counter sets do not exist on this system.");
+                throw new InvalidOperationException("Performance counter set '" + MemoryCategory + "' does not exist.");
             }
 
             adapters = new DxgiAdapterEnumerator().List();
@@ -36,7 +35,8 @@ namespace SysGadget.Core
                 throw new InvalidOperationException("DXGI lists no hardware graphics adapter.");
             }
 
-            previous = ReadEngineSamples();
+            memory = new PerformanceCounterCategory(MemoryCategory);
+            engines = new CategoryRateReader(EngineCategory, UtilizationCounter);
         }
 
         /// <summary>The hardware adapters being read.</summary>
@@ -46,17 +46,10 @@ namespace SysGadget.Core
         /// <returns>One entry per adapter, in the order of <see cref="Adapters"/>.</returns>
         public IReadOnlyList<GpuSample> Read()
         {
-            Dictionary<string, CounterSample> current = ReadEngineSamples();
             Dictionary<string, Dictionary<string, double>> byAdapter = new Dictionary<string, Dictionary<string, double>>();
-            foreach (KeyValuePair<string, CounterSample> pair in current)
+            foreach (KeyValuePair<string, double> engine in engines.Read().Of(UtilizationCounter))
             {
-                if (!previous.TryGetValue(pair.Key, out CounterSample before))
-                {
-                    continue; // The engine is new since the last call and has no interval yet.
-                }
-
-                GpuInstanceName name = GpuInstanceName.ParseEngine(pair.Key);
-                double value = CounterSample.Calculate(before, pair.Value);
+                GpuInstanceName name = GpuInstanceName.ParseEngine(engine.Key);
                 if (!byAdapter.TryGetValue(name.Luid, out Dictionary<string, double>? perType))
                 {
                     perType = new Dictionary<string, double>();
@@ -64,10 +57,9 @@ namespace SysGadget.Core
                 }
 
                 perType.TryGetValue(name.EngineType, out double sum);
-                perType[name.EngineType] = sum + value;
+                perType[name.EngineType] = sum + engine.Value;
             }
 
-            previous = current;
             Dictionary<string, ulong> used = ReadDedicatedUsage();
             List<GpuSample> result = new List<GpuSample>(adapters.Count);
             foreach (GpuAdapterInfo adapter in adapters)
@@ -86,18 +78,6 @@ namespace SysGadget.Core
             }
 
             return result;
-        }
-
-        private Dictionary<string, CounterSample> ReadEngineSamples()
-        {
-            Dictionary<string, CounterSample> samples = new Dictionary<string, CounterSample>();
-            InstanceDataCollection data = engines.ReadCategory()[UtilizationCounter];
-            foreach (InstanceData instance in data.Values)
-            {
-                samples[instance.InstanceName] = instance.Sample;
-            }
-
-            return samples;
         }
 
         private Dictionary<string, ulong> ReadDedicatedUsage()

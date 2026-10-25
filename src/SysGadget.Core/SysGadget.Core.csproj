@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -8,8 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CategoryRateReader.cs" />
     <Compile Include="CoreLoad.cs" />
     <Compile Include="CpuCounterProvider.cs" />
+    <Compile Include="DiskProvider.cs" />
+    <Compile Include="DiskSample.cs" />
     <Compile Include="DockEdge.cs" />
     <Compile Include="DxgiAdapterEnumerator.cs" />
     <Compile Include="GadgetSettings.cs" />
@@ -22,7 +25,10 @@
     <Compile Include="MeterCatalog.cs" />
     <Compile Include="MeterDefinition.cs" />
     <Compile Include="MeterSetting.cs" />
+    <Compile Include="NetworkProvider.cs" />
+    <Compile Include="NetworkSample.cs" />
     <Compile Include="ProcessorInstanceName.cs" />
+    <Compile Include="RateSnapshot.cs" />
     <Compile Include="SettingsStore.cs" />
   </ItemGroup>
 
