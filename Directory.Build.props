@@ -6,4 +6,11 @@
     <Product>SysGadget</Product>
     <Copyright>Brad Chamberlain</Copyright>
   </PropertyGroup>
+  <!-- Quality gates of every project (scripts/verify.ps1): analysers and code style run in the build. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
 </Project>

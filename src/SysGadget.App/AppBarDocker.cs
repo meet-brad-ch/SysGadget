@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
@@ -48,7 +49,7 @@ namespace SysGadget.App
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern uint RegisterWindowMessage(string name);
 
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
 
@@ -86,42 +87,22 @@ namespace SysGadget.App
 
             if (!registered)
             {
-                SHAppBarMessage(AbmNew, ref data);
+                Send(AbmNew, ref data, "ABM_NEW");
                 registered = true;
             }
 
-            bool horizontal = edge == DockEdge.Left || edge == DockEdge.Right;
-            data.Bounds = new Rect
+            data.Bounds = Proposal(edge, bounds, workArea);
+            Send(AbmQueryPos, ref data, "ABM_QUERYPOS");
+            data.Bounds = Cut(data.Bounds, edge, thickness);
+            Send(AbmSetPos, ref data, "ABM_SETPOS");
+            Rect rect = data.Bounds;
+            bool placed = SetWindowPos(handle, topmost ? HwndTopmost : HwndNoTopmost, rect.Left, rect.Top,
+                rect.Right - rect.Left, rect.Bottom - rect.Top, SwpNoActivate | SwpShowWindow);
+            if (!placed)
             {
-                Left = horizontal ? bounds.Left : workArea.Left,
-                Right = horizontal ? bounds.Right : workArea.Right,
-                Top = horizontal ? workArea.Top : bounds.Top,
-                Bottom = horizontal ? workArea.Bottom : bounds.Bottom,
-            };
-
-            SHAppBarMessage(AbmQueryPos, ref data);
-            switch (edge)
-            {
-                case DockEdge.Left:
-                    data.Bounds.Right = data.Bounds.Left + thickness;
-                    break;
-                case DockEdge.Right:
-                    data.Bounds.Left = data.Bounds.Right - thickness;
-                    break;
-                case DockEdge.Top:
-                    data.Bounds.Bottom = data.Bounds.Top + thickness;
-                    break;
-                case DockEdge.Bottom:
-                    data.Bounds.Top = data.Bounds.Bottom - thickness;
-                    break;
-                default:
-                    throw new ArgumentException("Not a docking edge: " + edge, nameof(edge));
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowPos failed for the docked bar.");
             }
 
-            SHAppBarMessage(AbmSetPos, ref data);
-            Rect rect = data.Bounds;
-            SetWindowPos(handle, topmost ? HwndTopmost : HwndNoTopmost, rect.Left, rect.Top,
-                rect.Right - rect.Left, rect.Bottom - rect.Top, SwpNoActivate | SwpShowWindow);
             return Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
         }
 
@@ -134,7 +115,7 @@ namespace SysGadget.App
             }
 
             AppBarData data = new AppBarData { Size = (uint)Marshal.SizeOf<AppBarData>(), Window = handle };
-            SHAppBarMessage(AbmRemove, ref data);
+            Send(AbmRemove, ref data, "ABM_REMOVE");
             registered = false;
         }
 
@@ -142,6 +123,49 @@ namespace SysGadget.App
         public void Dispose()
         {
             Undock();
+        }
+
+        /// <summary>The whole edge proposed to Windows: the full monitor along the edge, the work area across it.</summary>
+        private static Rect Proposal(DockEdge edge, Rectangle bounds, Rectangle workArea)
+        {
+            bool sideBar = edge == DockEdge.Left || edge == DockEdge.Right;
+            Rectangle along = sideBar ? Rectangle.FromLTRB(bounds.Left, workArea.Top, bounds.Right, workArea.Bottom)
+                                      : Rectangle.FromLTRB(workArea.Left, bounds.Top, workArea.Right, bounds.Bottom);
+            return new Rect { Left = along.Left, Top = along.Top, Right = along.Right, Bottom = along.Bottom };
+        }
+
+        /// <summary>The granted area cut to the bar's thickness at its edge.</summary>
+        private static Rect Cut(Rect granted, DockEdge edge, int thickness)
+        {
+            switch (edge)
+            {
+                case DockEdge.Left:
+                    granted.Right = granted.Left + thickness;
+                    break;
+                case DockEdge.Right:
+                    granted.Left = granted.Right - thickness;
+                    break;
+                case DockEdge.Top:
+                    granted.Bottom = granted.Top + thickness;
+                    break;
+                case DockEdge.Bottom:
+                    granted.Top = granted.Bottom - thickness;
+                    break;
+                default:
+                    throw new ArgumentException("Not a docking edge: " + edge, nameof(edge));
+            }
+
+            return granted;
+        }
+
+        /// <summary>Sends an app bar message; ABM_NEW gives FALSE when Windows refuses the bar, the others always TRUE.</summary>
+        /// <exception cref="InvalidOperationException">The message returned FALSE.</exception>
+        private static void Send(uint message, ref AppBarData data, string name)
+        {
+            if (SHAppBarMessage(message, ref data) == 0)
+            {
+                throw new InvalidOperationException("SHAppBarMessage " + name + " failed.");
+            }
         }
 
         private static uint EdgeCode(DockEdge edge)

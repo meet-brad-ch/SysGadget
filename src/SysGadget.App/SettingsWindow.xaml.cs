@@ -40,7 +40,7 @@ namespace SysGadget.App
             this.applyAutostart = applyAutostart;
             AutostartBox.IsChecked = startsWithWindows;
             working = current.Clone();
-            EdgeBox.ItemsSource = Enum.GetValues(typeof(DockEdge));
+            EdgeBox.ItemsSource = Enum.GetValues<DockEdge>();
             MonitorBox.ItemsSource = monitorNames;
             IntervalBox.ItemsSource = new[] { 250, 500, 1000, 2000, 5000 };
             DataContext = working;

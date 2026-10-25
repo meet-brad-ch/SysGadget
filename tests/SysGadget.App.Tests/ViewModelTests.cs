@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Media;
@@ -32,7 +33,7 @@ namespace SysGadget.App.Tests
             Assert.True(group.HasRows);
             Assert.False(group.HasStrip);
 
-            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", new MeterRow[0]));
+            group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", Array.Empty<MeterRow>()));
 
             Assert.False(group.HasBody);
         }
@@ -112,9 +113,9 @@ namespace SysGadget.App.Tests
         public void GadgetViewModel_Update_ColoursTheCardsByPosition()
         {
             GadgetViewModel view = new GadgetViewModel();
-            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", new MeterRow[0]);
-            GroupSection memory = new GroupSection(MeterCatalog.MemoryGroup, "Memory", new MeterRow[0]);
-            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", new MeterRow[0]);
+            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", Array.Empty<MeterRow>());
+            GroupSection memory = new GroupSection(MeterCatalog.MemoryGroup, "Memory", Array.Empty<MeterRow>());
+            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", Array.Empty<MeterRow>());
 
             view.Update(new[] { cpu, memory, gpu });
             Color gpuWhenLast = ((SolidColorBrush)view.Groups[2].AccentBrush).Color;
@@ -129,8 +130,8 @@ namespace SysGadget.App.Tests
         public void GadgetViewModel_Update_KeepsCardsWhenGroupsStayTheSame_AndRebuildsOnChange()
         {
             GadgetViewModel view = new GadgetViewModel();
-            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", new MeterRow[0]);
-            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", new MeterRow[0]);
+            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", Array.Empty<MeterRow>());
+            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", Array.Empty<MeterRow>());
 
             view.Update(new[] { cpu, gpu });
             GroupViewModel first = view.Groups[0];

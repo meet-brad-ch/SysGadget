@@ -29,7 +29,7 @@ namespace SysGadget.Core
                 throw new InvalidOperationException("Performance counter set '" + MemoryCategory + "' does not exist.");
             }
 
-            adapters = new DxgiAdapterEnumerator().List();
+            adapters = DxgiAdapterEnumerator.List();
             if (adapters.Count == 0)
             {
                 throw new InvalidOperationException("DXGI lists no hardware graphics adapter.");

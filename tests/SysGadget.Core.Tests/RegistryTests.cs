@@ -84,7 +84,7 @@ namespace SysGadget.Core.Tests
         {
             public IReadOnlyList<TemperatureReading> Read()
             {
-                return new TemperatureReading[0];
+                return Array.Empty<TemperatureReading>();
             }
 
             public void Dispose()

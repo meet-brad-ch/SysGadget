@@ -9,7 +9,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Read_ReturnsConsistentSample()
         {
-            MemorySample sample = new MemoryProvider().Read();
+            MemorySample sample = MemoryProvider.Read();
 
             Assert.True(sample.TotalBytes > 0);
             Assert.True(sample.AvailableBytes <= sample.TotalBytes);

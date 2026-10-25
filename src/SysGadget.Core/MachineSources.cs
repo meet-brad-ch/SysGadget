@@ -75,11 +75,7 @@ namespace SysGadget.Core
                     CpuCounterProvider cpu = new CpuCounterProvider();
                     return new SampleSource(context => cpu.Read(), cpu);
                 },
-                () =>
-                {
-                    MemoryProvider memory = new MemoryProvider();
-                    return new SampleSource(context => memory.Read(), null);
-                },
+                () => new SampleSource(context => MemoryProvider.Read(), null),
                 () =>
                 {
                     GpuCounterProvider gpu = new GpuCounterProvider();

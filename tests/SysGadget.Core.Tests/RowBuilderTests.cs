@@ -67,7 +67,7 @@ namespace SysGadget.Core.Tests
 
             Assert.Equal("Total", total.Label);
             Assert.Equal(50.0, total.Percent, 6);
-            Assert.Equal(0.0, MeterRowBuilder.CpuTotal(new CoreLoad[0])[0].Percent, 6);
+            Assert.Equal(0.0, MeterRowBuilder.CpuTotal(Array.Empty<CoreLoad>())[0].Percent, 6);
         }
 
         [Fact]
@@ -100,7 +100,7 @@ namespace SysGadget.Core.Tests
             Assert.True(rows[0].HasBar);
             Assert.Equal("Up", rows[1].Label);
             Assert.Equal(100.0, rows[1].Percent, 6);
-            Assert.Empty(MeterRowBuilder.Network(new NetworkSample[0], 500));
+            Assert.Empty(MeterRowBuilder.Network(Array.Empty<NetworkSample>(), 500));
         }
 
         [Fact]

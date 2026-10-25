@@ -59,7 +59,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void DxgiAdapterEnumerator_ListsAtLeastOneNamedAdapter()
         {
-            IReadOnlyList<GpuAdapterInfo> adapters = new DxgiAdapterEnumerator().List();
+            IReadOnlyList<GpuAdapterInfo> adapters = DxgiAdapterEnumerator.List();
 
             Assert.NotEmpty(adapters);
             foreach (GpuAdapterInfo adapter in adapters)

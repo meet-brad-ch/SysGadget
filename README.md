@@ -19,7 +19,7 @@ dotnet test tests/SysGadget.Core.Tests
 dotnet test tests/SysGadget.App.Tests
 ```
 
-**Verify:** none yet. `/sw-quality:sw-quality setup` creates one.
+**Verify:** `powershell -ExecutionPolicy Bypass -File scripts\verify.ps1` — build (warnings are errors, analysers at `latest-recommended`, code style in the build), every test with coverage (coverlet.collector 6.0.4; the Hardware tests too, so run it on the desk), `dotnet format --verify-no-changes`, cyclomatic complexity below 10 (lizard 1.17.31, `pip install lizard==1.17.31`). It prints one line per gate and exits non-zero on any FAIL or NOT VERIFIED. Tested with .NET SDK 10.0.400. The tests folder turns off CA1707 (test names use underscores) and CA1861 (constant arrays in asserts); see `tests/.editorconfig`.
 
 **Prerequisites:** Windows 11, .NET SDK 10.0 (10.0.400 tested). The default sources (performance counters, DXGI, NVML) need no admin rights. GPU temperature needs the NVIDIA driver (nvml.dll). The optional LibreHardwareMonitor source needs admin rights and loads a driver; the app offers to restart itself elevated.
 

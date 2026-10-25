@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 namespace SysGadget.Core
 {
     /// <summary>Lists the hardware graphics adapters through DXGI.</summary>
-    public sealed class DxgiAdapterEnumerator
+    public static class DxgiAdapterEnumerator
     {
         private const int DxgiErrorNotFound = unchecked((int)0x887A0002);
         private const uint SoftwareAdapterFlag = 2;
@@ -66,13 +67,13 @@ namespace SysGadget.Core
         /// <summary>Lists the hardware adapters; the software renderer is left out.</summary>
         /// <returns>One entry per hardware adapter.</returns>
         /// <exception cref="InvalidOperationException">DXGI could not be used.</exception>
-        public IReadOnlyList<GpuAdapterInfo> List()
+        public static IReadOnlyList<GpuAdapterInfo> List()
         {
             Guid factoryId = typeof(IDxgiFactory1).GUID;
             int hr = CreateDXGIFactory1(ref factoryId, out IntPtr factoryPointer);
             if (hr < 0)
             {
-                throw new InvalidOperationException("CreateDXGIFactory1 failed, HRESULT 0x" + hr.ToString("x8"));
+                throw new InvalidOperationException("CreateDXGIFactory1 failed, HRESULT 0x" + hr.ToString("x8", CultureInfo.InvariantCulture));
             }
 
             IDxgiFactory1 factory = (IDxgiFactory1)Marshal.GetObjectForIUnknown(factoryPointer);
@@ -90,7 +91,7 @@ namespace SysGadget.Core
 
                     if (hr < 0)
                     {
-                        throw new InvalidOperationException("EnumAdapters1 failed, HRESULT 0x" + hr.ToString("x8"));
+                        throw new InvalidOperationException("EnumAdapters1 failed, HRESULT 0x" + hr.ToString("x8", CultureInfo.InvariantCulture));
                     }
 
                     try
@@ -98,7 +99,7 @@ namespace SysGadget.Core
                         hr = adapter.GetDesc1(out AdapterDesc1 desc);
                         if (hr < 0)
                         {
-                            throw new InvalidOperationException("GetDesc1 failed, HRESULT 0x" + hr.ToString("x8"));
+                            throw new InvalidOperationException("GetDesc1 failed, HRESULT 0x" + hr.ToString("x8", CultureInfo.InvariantCulture));
                         }
 
                         if ((desc.Flags & SoftwareAdapterFlag) == 0)

@@ -1,0 +1,5 @@
+[*.cs]
+# Test names follow Method_Condition_Result; the underscores separate the parts.
+dotnet_diagnostic.CA1707.severity = none
+# Constant arrays in tests are expected values built once per test run, not a repeated hot path.
+dotnet_diagnostic.CA1861.severity = none

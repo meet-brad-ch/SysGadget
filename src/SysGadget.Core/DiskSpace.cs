@@ -37,7 +37,7 @@ namespace SysGadget.Core
         public static IReadOnlyList<string> DriveLettersOf(string diskName)
         {
             List<string> letters = new List<string>();
-            foreach (string word in diskName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string word in diskName.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 if (DriveLetter.IsMatch(word))
                 {

@@ -9,13 +9,14 @@ using SysGadget.Core;
 namespace SysGadget.App
 {
     /// <summary>Application entry: single instance, settings, and the controller.</summary>
-    public partial class App : Application
+    public partial class App : Application, IDisposable
     {
         // the installer's AppMutex names the same mutex, so setup asks to close a running gadget
         private const string MutexName = @"Local\SysGadget.SingleInstance";
         private const int MutexWaitMs = 3000;
 
         private Mutex? instanceLock;
+        private bool ownsInstanceLock; // a second copy that did not get the lock must not release it
         private GadgetController? controller;
         private readonly CrashLog crashLog = new CrashLog(CrashLog.DefaultPath());
         private bool reporting;
@@ -49,11 +50,24 @@ namespace SysGadget.App
             controller.Start();
         }
 
-        private void OnExit(object sender, ExitEventArgs e)
+        /// <summary>Closes the gadget and releases the single-instance lock; called once at exit.</summary>
+        public void Dispose()
         {
             controller?.Dispose();
-            instanceLock?.ReleaseMutex();
+            controller = null;
+            if (instanceLock != null && ownsInstanceLock)
+            {
+                instanceLock.ReleaseMutex();
+            }
+
             instanceLock?.Dispose();
+            instanceLock = null;
+            GC.SuppressFinalize(this);
+        }
+
+        private void OnExit(object sender, ExitEventArgs e)
+        {
+            Dispose();
         }
 
         private bool AcquireInstanceLock()
@@ -61,12 +75,14 @@ namespace SysGadget.App
             instanceLock = new Mutex(false, MutexName);
             try
             {
-                return instanceLock.WaitOne(MutexWaitMs); // a restarting copy waits for the old one to leave
+                ownsInstanceLock = instanceLock.WaitOne(MutexWaitMs); // a restarting copy waits for the old one to leave
             }
             catch (AbandonedMutexException)
             {
-                return true; // the previous copy ended without releasing; the lock is ours now
+                ownsInstanceLock = true; // the previous copy ended without releasing; the lock is ours now
             }
+
+            return ownsInstanceLock;
         }
 
         private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

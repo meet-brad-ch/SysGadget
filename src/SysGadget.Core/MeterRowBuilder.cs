@@ -172,7 +172,7 @@ namespace SysGadget.Core
         {
             if (samples.Count == 0)
             {
-                return new MeterRow[0];
+                return Array.Empty<MeterRow>();
             }
 
             return new[]
@@ -278,7 +278,7 @@ namespace SysGadget.Core
         public static string ShortDeviceName(string name)
         {
             List<string> kept = new List<string>();
-            foreach (string word in name.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string word in name.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 if (string.Equals(word, "with", StringComparison.OrdinalIgnoreCase))
                 {
@@ -303,7 +303,7 @@ namespace SysGadget.Core
         public static string ShortSensorName(string sensor)
         {
             List<string> kept = new List<string>();
-            string[] words = sensor.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] words = sensor.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < words.Length; i++)
             {
                 bool devicePrefix = i == 0 && words.Length > 1 && (words[i] == "GPU" || words[i] == "CPU");

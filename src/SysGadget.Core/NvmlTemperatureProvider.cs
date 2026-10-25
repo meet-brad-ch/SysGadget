@@ -28,8 +28,8 @@ namespace SysGadget.Core
         [DllImport(Library, EntryPoint = "nvmlDeviceGetHandleByIndex_v2")]
         private static extern int GetHandle(uint index, out IntPtr device);
 
-        [DllImport(Library, EntryPoint = "nvmlDeviceGetName", CharSet = CharSet.Ansi)]
-        private static extern int GetName(IntPtr device, StringBuilder name, uint length);
+        [DllImport(Library, EntryPoint = "nvmlDeviceGetName")]
+        private static extern int GetName(IntPtr device, [Out] byte[] name, uint length);
 
         [DllImport(Library, EntryPoint = "nvmlDeviceGetTemperature")]
         private static extern int GetTemperature(IntPtr device, int sensor, out uint celsius);
@@ -81,9 +81,9 @@ namespace SysGadget.Core
             for (uint index = 0; index < count; index++)
             {
                 Check(GetHandle(index, out IntPtr device), "nvmlDeviceGetHandleByIndex_v2");
-                StringBuilder name = new StringBuilder(NameLength);
+                byte[] name = new byte[NameLength];
                 Check(GetName(device, name, NameLength), "nvmlDeviceGetName");
-                gpus.Add(new Gpu(device, name.ToString(), Threshold(device, SlowdownThreshold), Threshold(device, ShutdownThreshold)));
+                gpus.Add(new Gpu(device, NameText(name), Threshold(device, SlowdownThreshold), Threshold(device, ShutdownThreshold)));
             }
         }
 
@@ -133,13 +133,21 @@ namespace SysGadget.Core
         }
 
         /// <summary>Shuts NVML down.</summary>
+        /// <exception cref="InvalidOperationException">nvmlShutdown failed.</exception>
         public void Dispose()
         {
             if (open)
             {
-                Shutdown();
                 open = false;
+                Check(Shutdown(), "nvmlShutdown");
             }
+        }
+
+        /// <summary>The NUL-terminated UTF-8 name NVML wrote into the buffer.</summary>
+        private static string NameText(byte[] buffer)
+        {
+            int length = Array.IndexOf(buffer, (byte)0);
+            return Encoding.UTF8.GetString(buffer, 0, length < 0 ? buffer.Length : length);
         }
 
         private static void Check(int result, string call)

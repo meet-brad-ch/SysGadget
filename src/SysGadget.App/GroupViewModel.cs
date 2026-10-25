@@ -68,7 +68,7 @@ namespace SysGadget.App
             Raise(nameof(HasBody));
         }
 
-        private static void Sync(ObservableCollection<RowViewModel> target, IReadOnlyList<MeterRow> rows)
+        private static void Sync(ObservableCollection<RowViewModel> target, List<MeterRow> rows)
         {
             while (target.Count > rows.Count)
             {
@@ -94,7 +94,7 @@ namespace SysGadget.App
                 (byte)Math.Round(from.B + ((to.B - from.B) * amount)));
         }
 
-        private static Brush Frozen(Color color)
+        private static SolidColorBrush Frozen(Color color)
         {
             SolidColorBrush brush = new SolidColorBrush(color);
             brush.Freeze();
