@@ -31,6 +31,7 @@
     <Compile Include="GadgetWindow.xaml.cs" />
     <Compile Include="GroupViewModel.cs" />
     <Compile Include="ObservableObject.cs" />
+    <Compile Include="RainbowPalette.cs" />
     <Compile Include="RowViewModel.cs" />
     <Compile Include="SettingsTreeNode.cs" />
     <Compile Include="SettingsWindow.xaml.cs" />

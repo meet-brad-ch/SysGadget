@@ -19,23 +19,23 @@ namespace SysGadget.App
         /// <summary>Creates the view of a group.</summary>
         /// <param name="id">Group id.</param>
         /// <param name="title">Heading.</param>
-        public GroupViewModel(string id, string title)
+        /// <param name="accent">The card colour; the gadget hands these out as a rainbow by position.</param>
+        public GroupViewModel(string id, string title, Color accent)
         {
             Id = id;
             Title = title;
-            Color accent = (Color)ColorConverter.ConvertFromString(MeterCatalog.GetGroup(id).Accent);
             AccentBrush = Frozen(accent);
             CardBrush = Frozen(Mix(CardBase, accent, CardTint));
             CardBorderBrush = Frozen(Mix(CardBase, accent, BorderTint));
         }
 
-        /// <summary>The group colour: title text.</summary>
+        /// <summary>The card colour: title text.</summary>
         public Brush AccentBrush { get; }
 
-        /// <summary>Card background: the neutral card colour tinted towards the group colour.</summary>
+        /// <summary>Card background: the neutral card colour tinted towards the card colour.</summary>
         public Brush CardBrush { get; }
 
-        /// <summary>Card border: a stronger tint of the group colour.</summary>
+        /// <summary>Card border: a stronger tint of the card colour.</summary>
         public Brush CardBorderBrush { get; }
 
         /// <summary>Group id.</summary>

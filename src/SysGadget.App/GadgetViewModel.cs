@@ -38,16 +38,19 @@ namespace SysGadget.App
             set => Set(ref sectionWidth, value);
         }
 
-        /// <summary>Shows a new sample; the cards are rebuilt only when the set or order of groups changes.</summary>
+        /// <summary>
+        /// Shows a new sample. The cards are rebuilt only when the set or order of groups changes,
+        /// and then get their rainbow colours by position.
+        /// </summary>
         /// <param name="sections">The sampled groups.</param>
         public void Update(IReadOnlyList<GroupSection> sections)
         {
             if (!Groups.Select(g => g.Id).SequenceEqual(sections.Select(s => s.Id)))
             {
                 Groups.Clear();
-                foreach (GroupSection section in sections)
+                for (int i = 0; i < sections.Count; i++)
                 {
-                    Groups.Add(new GroupViewModel(section.Id, section.Title));
+                    Groups.Add(new GroupViewModel(sections[i].Id, sections[i].Title, RainbowPalette.Accent(i, sections.Count)));
                 }
             }
 

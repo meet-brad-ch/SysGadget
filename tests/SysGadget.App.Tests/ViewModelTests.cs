@@ -11,7 +11,7 @@ namespace SysGadget.App.Tests
         [Fact]
         public void GroupViewModel_Update_SplitsCompactRows_AndSetsShowFlags()
         {
-            GroupViewModel group = new GroupViewModel(MeterCatalog.CpuGroup, "CPU");
+            GroupViewModel group = new GroupViewModel(MeterCatalog.CpuGroup, "CPU", Colors.Red);
 
             group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new[]
             {
@@ -39,20 +39,50 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
-        public void GroupViewModel_Brushes_FollowTheCatalogueAccent()
+        public void GroupViewModel_Brushes_TintTheCardTowardsItsAccent()
         {
-            GroupViewModel cpu = new GroupViewModel(MeterCatalog.CpuGroup, "CPU");
-            GroupViewModel gpu = new GroupViewModel(MeterCatalog.GpuGroup, "GPU");
+            Color accent = Color.FromRgb(0x4D, 0xA3, 0xFF);
+            GroupViewModel cpu = new GroupViewModel(MeterCatalog.CpuGroup, "CPU", accent);
 
-            Color accent = ((SolidColorBrush)cpu.AccentBrush).Color;
             Color card = ((SolidColorBrush)cpu.CardBrush).Color;
             Color border = ((SolidColorBrush)cpu.CardBorderBrush).Color;
 
-            Assert.Equal((Color)ColorConverter.ConvertFromString(MeterCatalog.GetGroup(MeterCatalog.CpuGroup).Accent), accent);
-            Assert.InRange(card.B, 0x27, border.B); // neutral card < tinted card < border, towards the blue accent
+            Assert.Equal(accent, ((SolidColorBrush)cpu.AccentBrush).Color);
+            Assert.InRange(card.B, 0x27, border.B); // neutral card < tinted card < border < accent
             Assert.InRange(border.B, card.B, accent.B);
-            Assert.NotEqual(((SolidColorBrush)gpu.CardBrush).Color, card);
             Assert.True(cpu.CardBrush.IsFrozen);
+        }
+
+        [Fact]
+        public void RainbowPalette_RunsFromRedToViolet_EvenlyOverTheCards()
+        {
+            Color first = RainbowPalette.Accent(0, 7);
+            Color middle = RainbowPalette.Accent(3, 7);
+            Color last = RainbowPalette.Accent(6, 7);
+
+            Assert.True(first.R > first.G && first.R > first.B, "first card red: " + first);
+            Assert.True(middle.G > middle.R && middle.G > middle.B, "middle card green: " + middle);
+            Assert.True(last.B > last.G && last.R > last.G, "last card violet: " + last);
+            Assert.Equal(first, RainbowPalette.Accent(0, 1));
+            Assert.Equal(7, Enumerable.Range(0, 7).Select(i => RainbowPalette.Accent(i, 7)).Distinct().Count());
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => RainbowPalette.Accent(3, 3));
+        }
+
+        [Fact]
+        public void GadgetViewModel_Update_ColoursTheCardsByPosition()
+        {
+            GadgetViewModel view = new GadgetViewModel();
+            GroupSection cpu = new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new MeterRow[0]);
+            GroupSection memory = new GroupSection(MeterCatalog.MemoryGroup, "Memory", false, new MeterRow[0]);
+            GroupSection gpu = new GroupSection(MeterCatalog.GpuGroup, "GPU", false, new MeterRow[0]);
+
+            view.Update(new[] { cpu, memory, gpu });
+            Color gpuWhenLast = ((SolidColorBrush)view.Groups[2].AccentBrush).Color;
+            view.Update(new[] { gpu, cpu });
+
+            Assert.Equal(RainbowPalette.Accent(2, 3), gpuWhenLast);
+            Assert.Equal(RainbowPalette.Accent(0, 2), ((SolidColorBrush)view.Groups[0].AccentBrush).Color);
+            Assert.Equal(RainbowPalette.Accent(1, 2), ((SolidColorBrush)view.Groups[1].AccentBrush).Color);
         }
 
         [Fact]

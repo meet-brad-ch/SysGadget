@@ -100,35 +100,35 @@ namespace SysGadget.Core
         /// <summary>Every group, in default display order.</summary>
         public static IReadOnlyList<GroupDefinition> Groups { get; } = new List<GroupDefinition>
         {
-            new GroupDefinition(CpuGroup, "CPU", "#4DA3FF", new[]
+            new GroupDefinition(CpuGroup, "CPU", new[]
             {
                 new ItemDefinition(CpuTotal, "Total", Sources.Cpu, true),
                 new ItemDefinition(CpuCores, "Per core", Sources.Cpu, true),
             }),
-            new GroupDefinition(MemoryGroup, "Memory", "#A879FF", new[]
+            new GroupDefinition(MemoryGroup, "Memory", new[]
             {
                 new ItemDefinition(Ram, "RAM", Sources.Memory, true),
                 new ItemDefinition(Commit, "Commit charge", Sources.Memory, false),
             }),
-            new GroupDefinition(GpuGroup, "GPU", "#3DD68C", new[]
+            new GroupDefinition(GpuGroup, "GPU", new[]
             {
                 new ItemDefinition(GpuLoad, "Load", Sources.Gpu, true),
                 new ItemDefinition(GpuMemory, "Dedicated memory", Sources.Gpu, true),
                 new ItemDefinition(GpuTemperature, "Temperature (NVIDIA)", Sources.GpuTemperature, true),
             }),
-            new GroupDefinition(StorageGroup, "Storage", "#36C5D9", new[]
+            new GroupDefinition(StorageGroup, "Storage", new[]
             {
                 new ItemDefinition(Disks, "Disk activity", Sources.Disk, false),
             }),
-            new GroupDefinition(NetworkGroup, "Network", "#FF7AB6", new[]
+            new GroupDefinition(NetworkGroup, "Network", new[]
             {
                 new ItemDefinition(NetworkRates, "Down and up", Sources.Network, false),
             }),
-            new GroupDefinition(SensorsGroup, "Sensors", "#FF8F5A", new[]
+            new GroupDefinition(SensorsGroup, "Sensors", new[]
             {
                 new ItemDefinition(Temperatures, "Temperatures (LibreHardwareMonitor)", Sources.Temperature, false),
             }),
-            new GroupDefinition(SystemGroup, "System", "#9AA7B8", new[]
+            new GroupDefinition(SystemGroup, "System", new[]
             {
                 new ItemDefinition(Time, "Time", Sources.Clock, false),
                 new ItemDefinition(Uptime, "Uptime", Sources.Clock, false),
