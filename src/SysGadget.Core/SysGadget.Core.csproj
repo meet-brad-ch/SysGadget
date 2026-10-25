@@ -10,18 +10,25 @@
   <ItemGroup>
     <Compile Include="CoreLoad.cs" />
     <Compile Include="CpuCounterProvider.cs" />
+    <Compile Include="DockEdge.cs" />
     <Compile Include="DxgiAdapterEnumerator.cs" />
+    <Compile Include="GadgetSettings.cs" />
     <Compile Include="GpuAdapterInfo.cs" />
     <Compile Include="GpuCounterProvider.cs" />
     <Compile Include="GpuInstanceName.cs" />
     <Compile Include="GpuSample.cs" />
     <Compile Include="MemoryProvider.cs" />
     <Compile Include="MemorySample.cs" />
+    <Compile Include="MeterCatalog.cs" />
+    <Compile Include="MeterDefinition.cs" />
+    <Compile Include="MeterSetting.cs" />
     <Compile Include="ProcessorInstanceName.cs" />
+    <Compile Include="SettingsStore.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
   </ItemGroup>
 
 </Project>

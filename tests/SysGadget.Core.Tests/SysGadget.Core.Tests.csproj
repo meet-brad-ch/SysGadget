@@ -13,6 +13,7 @@
     <Compile Include="GpuTests.cs" />
     <Compile Include="MemoryProviderTests.cs" />
     <Compile Include="ProcessorInstanceNameTests.cs" />
+    <Compile Include="SettingsTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
