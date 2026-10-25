@@ -15,15 +15,18 @@ namespace SysGadget.Core
             new Dictionary<string, Func<object, GadgetSettings, IReadOnlyList<MeterRow>>>();
 
         private readonly Func<ITemperatureSource>? temperatureFactory;
+        private readonly bool nvidiaInstalled;
 
         /// <summary>Builds the registry.</summary>
         /// <param name="temperatureFactory">
         /// Opens the temperature source, or null when none is available (no admin rights).
         /// </param>
+        /// <param name="nvidiaInstalled">Whether the NVIDIA driver with NVML is installed (GPU temperature).</param>
         /// <exception cref="InvalidOperationException">A catalogue source or item has no behaviour.</exception>
-        public MeterRegistry(Func<ITemperatureSource>? temperatureFactory)
+        public MeterRegistry(Func<ITemperatureSource>? temperatureFactory, bool nvidiaInstalled)
         {
             this.temperatureFactory = temperatureFactory;
+            this.nvidiaInstalled = nvidiaInstalled;
             AddSources();
             AddItems();
             CheckCoverage();
@@ -35,17 +38,17 @@ namespace SysGadget.Core
         /// <returns>A reason for the user, or null.</returns>
         public string? UnavailableReason(string sourceId, GadgetSettings settings)
         {
-            if (sourceId != MeterCatalog.Sources.Temperature)
+            switch (sourceId)
             {
-                return null;
+                case MeterCatalog.Sources.Temperature when !settings.UseLibreHardwareMonitor:
+                    return "Turn on in Settings";
+                case MeterCatalog.Sources.Temperature when temperatureFactory == null:
+                    return "Needs admin rights";
+                case MeterCatalog.Sources.GpuTemperature when !nvidiaInstalled:
+                    return "No NVIDIA driver";
+                default:
+                    return null;
             }
-
-            if (!settings.UseLibreHardwareMonitor)
-            {
-                return "Turn on in Settings";
-            }
-
-            return temperatureFactory == null ? "Needs admin rights" : null;
         }
 
         /// <summary>Opens a source.</summary>
@@ -83,6 +86,11 @@ namespace SysGadget.Core
                 GpuCounterProvider gpu = new GpuCounterProvider();
                 return new SampleSource(context => gpu.Read(), null);
             };
+            sources[MeterCatalog.Sources.GpuTemperature] = () =>
+            {
+                NvmlTemperatureProvider nvml = new NvmlTemperatureProvider();
+                return new SampleSource(context => nvml.Read(), nvml);
+            };
             sources[MeterCatalog.Sources.Disk] = () =>
             {
                 DiskProvider disk = new DiskProvider();
@@ -109,6 +117,7 @@ namespace SysGadget.Core
             Add<MemorySample>(MeterCatalog.Commit, (memory, s) => MeterRowBuilder.Commit(memory));
             Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuLoad, (gpus, s) => MeterRowBuilder.GpuLoad(gpus));
             Add<IReadOnlyList<GpuSample>>(MeterCatalog.GpuMemory, (gpus, s) => MeterRowBuilder.GpuMemory(gpus));
+            Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.GpuTemperature, (readings, s) => MeterRowBuilder.GpuTemperature(readings));
             Add<IReadOnlyList<DiskSample>>(MeterCatalog.Disks, (disks, s) => MeterRowBuilder.Disks(disks));
             Add<IReadOnlyList<NetworkSample>>(MeterCatalog.NetworkRates, (network, s) => MeterRowBuilder.Network(network));
             Add<IReadOnlyList<TemperatureReading>>(MeterCatalog.Temperatures, (readings, s) => MeterRowBuilder.Temperatures(readings));

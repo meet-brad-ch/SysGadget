@@ -40,7 +40,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_Defaults_GivesCpuMemoryGpu_InOrder_TotalAsTheFirstCpuRow()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = GadgetSettings.CreateDefault();
                 sampler.Sample(settings, Context);
@@ -55,14 +55,14 @@ namespace SysGadget.Core.Tests
                 Assert.Equal("Core 0", cpu.Rows[1].Label);
                 Assert.Equal(Environment.ProcessorCount + 1, cpu.Rows.Count);
                 Assert.Equal("RAM", sections[1].Rows.Single().Label);
-                Assert.Equal(new[] { "Load", "VRAM" }, sections[2].Rows.Select(r => r.Label).Take(2));
+                Assert.Equal(new[] { "Load", "VRAM", "Temp" }, sections[2].Rows.Select(r => r.Label));
             }
         }
 
         [Fact]
         public void Sample_EveryItemVisible_EveryGroupHasRows()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id).ToArray());
                 sampler.Sample(settings, Context);
@@ -78,7 +78,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_HiddenGroup_AndGroupWithoutVisibleItems_AreLeftOut()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Time, MeterCatalog.Ram);
                 settings.SetGroupVisible(MeterCatalog.MemoryGroup, false);
@@ -92,7 +92,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_PassesCollapsedState_AndCompactCoreRows()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.CpuCores);
                 settings.SetCollapsed(MeterCatalog.CpuGroup, true);
@@ -108,7 +108,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_TemperaturesWithoutSource_ShowTheReasonRow()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null)))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
 
@@ -124,7 +124,7 @@ namespace SysGadget.Core.Tests
         {
             int created = 0;
             FakeTemperatures fake = new FakeTemperatures();
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(() => { created++; return fake; })))
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(() => { created++; return fake; }, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
                 settings.UseLibreHardwareMonitor = true;

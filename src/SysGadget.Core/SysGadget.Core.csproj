@@ -37,6 +37,7 @@
     <Compile Include="MeterSampler.cs" />
     <Compile Include="NetworkProvider.cs" />
     <Compile Include="NetworkSample.cs" />
+    <Compile Include="NvmlTemperatureProvider.cs" />
     <Compile Include="ProcessorInstanceName.cs" />
     <Compile Include="RateSnapshot.cs" />
     <Compile Include="SampleContext.cs" />

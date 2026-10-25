@@ -77,7 +77,7 @@ namespace SysGadget.App
         private static MeterSampler CreateSampler()
         {
             Func<ITemperatureSource>? temperatures = Elevation.IsAdministrator() ? Elevation.OpenTemperatureSource : null;
-            return new MeterSampler(new MeterRegistry(temperatures));
+            return new MeterSampler(new MeterRegistry(temperatures, NvmlTemperatureProvider.IsInstalled()));
         }
 
         private void ApplySettings(GadgetSettings next)

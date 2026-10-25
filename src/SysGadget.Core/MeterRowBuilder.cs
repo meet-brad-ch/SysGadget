@@ -94,6 +94,24 @@ namespace SysGadget.Core
             return rows;
         }
 
+        /// <summary>GPU core temperature per GPU; the bar shows degrees on a 0 to 100 scale.</summary>
+        /// <param name="readings">One reading per GPU, the hardware name being the GPU name.</param>
+        /// <returns>One row per GPU: "Temp" with one GPU, the short GPU name with more.</returns>
+        public static IReadOnlyList<MeterRow> GpuTemperature(IReadOnlyList<TemperatureReading> readings)
+        {
+            List<MeterRow> rows = new List<MeterRow>(readings.Count);
+            foreach (TemperatureReading reading in readings)
+            {
+                rows.Add(new MeterRow(
+                    readings.Count == 1 ? "Temp" : ShortGpuName(reading.HardwareName),
+                    Degrees(reading.Celsius),
+                    Math.Max(0.0, Math.Min(100.0, reading.Celsius)),
+                    true));
+            }
+
+            return rows;
+        }
+
         /// <summary>Drops the vendor words so the name fits a narrow label, for example "RTX 4090".</summary>
         /// <param name="name">The adapter name as DXGI reports it.</param>
         /// <returns>The shortened name; the full name when nothing is left after shortening.</returns>
@@ -163,7 +181,7 @@ namespace SysGadget.Core
             {
                 rows.Add(new MeterRow(
                     reading.SensorName,
-                    reading.Celsius.ToString("0", CultureInfo.InvariantCulture) + " °C",
+                    Degrees(reading.Celsius),
                     Math.Max(0.0, Math.Min(100.0, reading.Celsius)),
                     true));
             }
@@ -195,6 +213,11 @@ namespace SysGadget.Core
         private static MeterRow Percent(string label, double percent)
         {
             return new MeterRow(label, PercentText(percent), percent, true);
+        }
+
+        private static string Degrees(double celsius)
+        {
+            return celsius.ToString("0", CultureInfo.InvariantCulture) + " °C";
         }
 
         private static string PercentText(double percent)

@@ -138,6 +138,23 @@ namespace SysGadget.Core.Tests
             Assert.Equal("UHD Graphics 770", MeterRowBuilder.GpuMemory(new[] { rtx, intel })[1].Label);
         }
 
+        [Fact]
+        public void GpuTemperature_LabelsTempForOneGpu_ShortNamesForMore_AndClampsTheBar()
+        {
+            TemperatureReading rtx = new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU", 54.0);
+            TemperatureReading hot = new TemperatureReading("NVIDIA GeForce RTX 3060", "GPU", 104.0);
+
+            MeterRow single = MeterRowBuilder.GpuTemperature(new[] { rtx })[0];
+            IReadOnlyList<MeterRow> two = MeterRowBuilder.GpuTemperature(new[] { rtx, hot });
+
+            Assert.Equal("Temp", single.Label);
+            Assert.Equal("54 °C", single.ValueText);
+            Assert.True(single.HasBar);
+            Assert.Equal("RTX 4090", two[0].Label);
+            Assert.Equal("RTX 3060", two[1].Label);
+            Assert.Equal(100.0, two[1].Percent, 6);
+        }
+
         [Theory]
         [InlineData("NVIDIA GeForce RTX 4090", "RTX 4090")]
         [InlineData("AMD Radeon RX 7900 XTX", "RX 7900 XTX")]

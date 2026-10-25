@@ -21,6 +21,9 @@ namespace SysGadget.Core
             /// <summary>GPU load and memory per adapter.</summary>
             public const string Gpu = "source.gpu";
 
+            /// <summary>NVIDIA GPU temperatures through NVML.</summary>
+            public const string GpuTemperature = "source.gputemperature";
+
             /// <summary>Disk activity.</summary>
             public const string Disk = "source.disk";
 
@@ -34,7 +37,7 @@ namespace SysGadget.Core
             public const string Clock = "source.clock";
 
             /// <summary>Every source id.</summary>
-            public static IReadOnlyList<string> All { get; } = new[] { Cpu, Memory, Gpu, Disk, Network, Temperature, Clock };
+            public static IReadOnlyList<string> All { get; } = new[] { Cpu, Memory, Gpu, GpuTemperature, Disk, Network, Temperature, Clock };
         }
 
         /// <summary>Id of the CPU group.</summary>
@@ -63,6 +66,9 @@ namespace SysGadget.Core
 
         /// <summary>Id of the GPU dedicated memory item.</summary>
         public const string GpuMemory = "gpu.memory";
+
+        /// <summary>Id of the GPU temperature item (NVIDIA, through NVML).</summary>
+        public const string GpuTemperature = "gpu.temperature";
 
         /// <summary>Id of the storage group.</summary>
         public const string StorageGroup = "storage";
@@ -108,6 +114,7 @@ namespace SysGadget.Core
             {
                 new ItemDefinition(GpuLoad, "Load", Sources.Gpu, true),
                 new ItemDefinition(GpuMemory, "Dedicated memory", Sources.Gpu, true),
+                new ItemDefinition(GpuTemperature, "Temperature (NVIDIA)", Sources.GpuTemperature, true),
             }),
             new GroupDefinition(StorageGroup, "Storage", new[]
             {

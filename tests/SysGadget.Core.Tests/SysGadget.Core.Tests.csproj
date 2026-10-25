@@ -16,6 +16,7 @@
     <Compile Include="GpuTests.cs" />
     <Compile Include="MemoryProviderTests.cs" />
     <Compile Include="MeterSamplerTests.cs" />
+    <Compile Include="NvmlTemperatureProviderTests.cs" />
     <Compile Include="ProcessorInstanceNameTests.cs" />
     <Compile Include="RegistryTests.cs" />
     <Compile Include="RowBuilderTests.cs" />
