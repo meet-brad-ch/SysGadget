@@ -161,28 +161,28 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Disks_WithoutSpace_KeepTheSameThreeRows_WithNoVolumeOnTheNameRow()
         {
-            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("0 D:", 40.0, 1024, 0) });
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("0 D:", 1024, 0) });
 
-            Assert.Equal(new[] { "0 D:", "Active", string.Empty }, rows.Select(r => r.Label));
+            Assert.Equal(new[] { "0 D:", "Read", "Write" }, rows.Select(r => r.Label));
             Assert.Equal("no volume", rows[0].ValueText);
             Assert.False(rows[0].HasBar);
-            Assert.Equal("40 %", rows[1].ValueText);
-            Assert.True(rows[1].HasBar);
-            Assert.Equal("R 1.0 KB/s  W 0 B/s", rows[2].ValueText);
+            Assert.Equal("1.0 KB/s", rows[1].ValueText);
+            Assert.Equal("0 B/s", rows[2].ValueText);
+            Assert.All(rows.Skip(1), r => Assert.False(r.HasBar));
             Assert.All(rows, r => Assert.Equal("0 D:", r.Instance));
         }
 
         [Fact]
-        public void Disks_WithSpace_PutTheUsedSpaceFirst_UnderTheDiskName_ThenActive_ThenRates()
+        public void Disks_WithSpace_PutTheUsedSpaceFirst_UnderTheDiskName_ThenReadAndWriteOnTheirOwnRows()
         {
             DiskSpace space = new DiskSpace(1000UL << 30, 750UL << 30);
 
-            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("1 C:", 40.0, 1024, 0, space) });
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Disks(new[] { new DiskSample("1 C:", 1024, 2048, space) });
 
-            Assert.Equal(new[] { "1 C:", "Active", string.Empty }, rows.Select(r => r.Label));
+            Assert.Equal(new[] { "1 C:", "Read", "Write" }, rows.Select(r => r.Label));
             Assert.Equal("250 / 1000 GB", rows[0].ValueText);
             Assert.Equal(25.0, rows[0].Percent, 6);
-            Assert.Equal("40 %", rows[1].ValueText);
+            Assert.Equal("2.0 KB/s", rows[2].ValueText);
             Assert.All(rows, r => Assert.Equal("1 C:", r.Instance));
         }
 

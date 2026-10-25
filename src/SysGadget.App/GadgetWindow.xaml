@@ -93,6 +93,8 @@
         <!-- Value text of a row that has a bar: sits right of the bar. -->
         <Style x:Key="BarValueStyle" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <!-- every digit equally wide: a changing number does not make the text jump -->
+            <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="HorizontalAlignment" Value="Right" />
             <Setter Property="VerticalAlignment" Value="Center" />

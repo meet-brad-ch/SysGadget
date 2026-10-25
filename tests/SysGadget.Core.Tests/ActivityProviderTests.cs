@@ -52,7 +52,6 @@ namespace SysGadget.Core.Tests
             foreach (DiskSample sample in samples)
             {
                 Assert.NotEqual("_total", sample.Name.ToLowerInvariant());
-                Assert.InRange(sample.BusyPercent, 0.0, 100.0);
                 Assert.True(sample.ReadBytesPerSecond >= 0.0);
                 Assert.True(sample.WriteBytesPerSecond >= 0.0);
             }

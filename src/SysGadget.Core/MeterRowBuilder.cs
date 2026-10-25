@@ -193,8 +193,8 @@ namespace SysGadget.Core
         /// <returns>
         /// Three rows per disk, the same for every disk, all tagged with the disk as their instance: the
         /// disk's name with the used space ("412 / 931 GB", bar = share used) or "no volume" without a
-        /// bar when Windows reads no volume on it; then "Active" (busy bar); then the read and write
-        /// rates without a bar.
+        /// bar when Windows reads no volume on it; then "Read" and "Write", each rate on its own row
+        /// so neither value shifts when the other changes length.
         /// </returns>
         public static IReadOnlyList<MeterRow> Disks(IReadOnlyList<DiskSample> samples)
         {
@@ -210,14 +210,8 @@ namespace SysGadget.Core
                         false,
                         sample.Name)
                     : new MeterRow(sample.Name, "no volume", 0.0, false, false, sample.Name));
-                rows.Add(new MeterRow("Active", PercentText(sample.BusyPercent), sample.BusyPercent, true, false, sample.Name));
-                rows.Add(new MeterRow(
-                    string.Empty,
-                    "R " + ByteFormat.Rate(sample.ReadBytesPerSecond) + "  W " + ByteFormat.Rate(sample.WriteBytesPerSecond),
-                    0.0,
-                    false,
-                    false,
-                    sample.Name));
+                rows.Add(new MeterRow("Read", ByteFormat.Rate(sample.ReadBytesPerSecond), 0.0, false, false, sample.Name));
+                rows.Add(new MeterRow("Write", ByteFormat.Rate(sample.WriteBytesPerSecond), 0.0, false, false, sample.Name));
             }
 
             return rows;
