@@ -125,7 +125,9 @@
                     <ColumnDefinition Width="Auto" SharedSizeGroup="Value" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding Label}" Foreground="{StaticResource DimBrush}" FontSize="11"
-                           TextTrimming="CharacterEllipsis" MaxWidth="64" VerticalAlignment="Center" />
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           MaxWidth="{Binding DataContext.LabelMaxWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                           ToolTip="{Binding Label}" />
                 <ProgressBar Grid.Column="1" Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource BarStyle}"
                              Margin="7,0" />
                 <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource BarValueStyle}" />

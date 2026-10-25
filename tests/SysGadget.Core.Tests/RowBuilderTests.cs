@@ -104,13 +104,19 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Temperatures_UseTheSensorName_ClampTheBar_AndShowDegrees()
+        public void Temperatures_NameTheDevice_DropAlarmLimits_ClampTheBar_AndShowDegrees()
         {
-            MeterRow row = MeterRowBuilder.Temperatures(new[] { new TemperatureReading("CPU", "Package", 123.4) })[0];
+            IReadOnlyList<MeterRow> rows = MeterRowBuilder.Temperatures(new[]
+            {
+                new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU Hot Spot", 60.0),
+                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Composite", 123.4),
+                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Warning Temperature", 81.0),
+                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Critical Temperature", 84.0),
+            });
 
-            Assert.Equal("Package", row.Label);
-            Assert.Equal("123 °C", row.ValueText);
-            Assert.Equal(100.0, row.Percent, 6);
+            Assert.Equal(new[] { "RTX 4090 Hot Spot", "990 PRO Composite" }, rows.Select(r => r.Label));
+            Assert.Equal("123 °C", rows[1].ValueText);
+            Assert.Equal(100.0, rows[1].Percent, 6);
         }
 
         [Fact]
@@ -162,9 +168,13 @@ namespace SysGadget.Core.Tests
         [InlineData("NVIDIA GeForce RTX 4090", "RTX 4090")]
         [InlineData("AMD Radeon RX 7900 XTX", "RX 7900 XTX")]
         [InlineData("NVIDIA", "NVIDIA")]
-        public void ShortGpuName_DropsVendorWords(string name, string expected)
+        [InlineData("Samsung SSD 990 PRO 2TB", "990 PRO")]
+        [InlineData("WD_BLACK SN850X 1000GB", "WD_BLACK SN850X")]
+        [InlineData("AMD Ryzen 9 7950X 16-Core Processor", "Ryzen 9 7950X")]
+        [InlineData("Intel(R) UHD Graphics 770", "UHD Graphics 770")]
+        public void ShortDeviceName_DropsVendorWordsAndCapacity(string name, string expected)
         {
-            Assert.Equal(expected, MeterRowBuilder.ShortGpuName(name));
+            Assert.Equal(expected, MeterRowBuilder.ShortDeviceName(name));
         }
 
         [Fact]

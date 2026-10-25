@@ -70,6 +70,11 @@ namespace SysGadget.App
             ApplySettings(withInstances);
             window.Show();
             ApplyLayout();
+            if (settings.ShowsTemperatures() && !Elevation.IsAdministrator() && AskForElevation())
+            {
+                return; // the elevated copy takes over
+            }
+
             OnTick(this, EventArgs.Empty);
         }
 
@@ -96,13 +101,14 @@ namespace SysGadget.App
 
         private void ApplySettings(GadgetSettings next)
         {
-            if (next.UseLibreHardwareMonitor && !Elevation.IsAdministrator() && AskForElevation())
+            bool wasShowingTemperatures = settings.ShowsTemperatures();
+            settings = next;
+            store.Save(settings); // saved first: an elevated restart must read the new settings
+            if (settings.ShowsTemperatures() && !wasShowingTemperatures && !Elevation.IsAdministrator() && AskForElevation())
             {
                 return;
             }
 
-            settings = next;
-            store.Save(settings);
             samplers.Replace(CreateSampler()); // a sample still running finishes on the old one
             timer.Interval = TimeSpan.FromMilliseconds(settings.IntervalMs);
             window.ShowTopmostState(settings.AlwaysOnTop);
@@ -114,10 +120,17 @@ namespace SysGadget.App
             timer.Start();
         }
 
+        /// <summary>
+        /// Offers to restart as administrator. The question is owned by the settings window (or the
+        /// gadget), so it cannot open behind those always-on-top windows.
+        /// </summary>
+        /// <returns>True when the elevated copy started and this one is ending.</returns>
         private bool AskForElevation()
         {
+            Window owner = (Window?)settingsWindow ?? window;
             MessageBoxResult answer = MessageBox.Show(
-                "LibreHardwareMonitor needs administrator rights for temperatures.\n\nRestart SysGadget as administrator now?",
+                owner,
+                "Temperatures are read through LibreHardwareMonitor, which needs administrator rights.\n\nRestart SysGadget as administrator now?",
                 "SysGadget",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);

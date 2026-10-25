@@ -53,14 +53,11 @@ namespace SysGadget.Core
 
         /// <summary>Why a source cannot be opened now, or null when it can.</summary>
         /// <param name="sourceId">The source id.</param>
-        /// <param name="settings">The current settings.</param>
         /// <returns>A reason for the user, or null.</returns>
-        public string? UnavailableReason(string sourceId, GadgetSettings settings)
+        public string? UnavailableReason(string sourceId)
         {
             switch (sourceId)
             {
-                case MeterCatalog.Sources.Temperature when !settings.UseLibreHardwareMonitor:
-                    return "Turn on in Settings";
                 case MeterCatalog.Sources.Temperature when temperatureFactory == null:
                     return "Needs admin rights";
                 case MeterCatalog.Sources.GpuTemperature when !nvidiaInstalled:

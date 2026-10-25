@@ -31,7 +31,7 @@ namespace SysGadget.Core
             HashSet<string> needed = new HashSet<string>(
                 groups.SelectMany(g => ShownItems(g, settings))
                     .Select(i => MeterCatalog.GetItem(i.Id).SourceId)
-                    .Where(sourceId => registry.UnavailableReason(sourceId, settings) == null));
+                    .Where(sourceId => registry.UnavailableReason(sourceId) == null));
 
             Maintain(needed);
             Dictionary<string, object> snapshots = needed.ToDictionary(id => id, id => open[id].Read(context));
@@ -105,7 +105,7 @@ namespace SysGadget.Core
                 return registry.Rows(itemId, snapshot, settings);
             }
 
-            string reason = registry.UnavailableReason(item.SourceId, settings)
+            string reason = registry.UnavailableReason(item.SourceId)
                 ?? throw new InvalidOperationException("Source '" + item.SourceId + "' was not read.");
             return new[] { new MeterRow(string.Empty, reason, 0.0, false) };
         }

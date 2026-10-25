@@ -186,7 +186,7 @@ namespace SysGadget.Core.Tests
 
                 MeterRow row = sampler.Sample(settings, Context).Single().Rows.Single();
 
-                Assert.Equal("Turn on in Settings", row.ValueText);
+                Assert.Equal("Needs admin rights", row.ValueText);
                 Assert.False(row.HasBar);
             }
         }
@@ -199,7 +199,6 @@ namespace SysGadget.Core.Tests
             using (MeterSampler sampler = new MeterSampler(new MeterRegistry(() => { created++; return fake; }, NvmlTemperatureProvider.IsInstalled())))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
-                settings.UseLibreHardwareMonitor = true;
 
                 sampler.Sample(settings, Context);
                 MeterRow row = sampler.Sample(settings, Context).Single().Rows.Single();

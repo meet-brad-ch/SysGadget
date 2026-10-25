@@ -72,8 +72,15 @@ namespace SysGadget.Core
         /// <summary>Time between samples.</summary>
         public int IntervalMs { get; set; } = 1000;
 
-        /// <summary>Use LibreHardwareMonitor for temperatures and power; asks for admin rights.</summary>
-        public bool UseLibreHardwareMonitor { get; set; }
+        /// <summary>
+        /// Whether the LibreHardwareMonitor temperatures are shown (group and item ticked). This is the
+        /// one switch for them: showing them needs administrator rights.
+        /// </summary>
+        /// <returns>True when the temperatures are to be shown.</returns>
+        public bool ShowsTemperatures()
+        {
+            return IsGroupVisible(MeterCatalog.SensorsGroup) && IsItemVisible(MeterCatalog.Temperatures);
+        }
 
         /// <summary>
         /// Thin bar: each group shows only its first visible item, on one line with the group title.

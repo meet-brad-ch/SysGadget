@@ -136,6 +136,28 @@ namespace SysGadget.App.Tests
             });
         }
 
+        /// <summary>
+        /// Regression: temperatures had two switches (the tree item and a separate checkbox); ticking the
+        /// tree item alone left them off with "Turn on in Settings". The tree item is now the one switch.
+        /// </summary>
+        [Fact]
+        public void TemperaturesItem_TickedInTheTree_TurnsTheTemperaturesOn()
+        {
+            StaRunner.Run(() =>
+            {
+                List<GadgetSettings> applied = new List<GadgetSettings>();
+                SettingsWindow window = Open(GadgetSettings.CreateDefault(), applied);
+                CheckBox box = Descendants<CheckBox>(window).Single(c =>
+                    c.DataContext is SettingsTreeNode node && node.Id == MeterCatalog.Temperatures);
+
+                ((IToggleProvider)new CheckBoxAutomationPeer(box).GetPattern(PatternInterface.Toggle)!).Toggle();
+                Click(Descendants<Button>(window).Single(b => (string)b.Content == "OK"));
+
+                Assert.True(applied.Single().ShowsTemperatures());
+                Assert.DoesNotContain(Descendants<CheckBox>(window), c => (c.Content as string ?? string.Empty).Contains("LibreHardwareMonitor"));
+            });
+        }
+
         [Fact]
         public void TakeSwitches_ShowsTheGadgetsThinAndTopmostState()
         {

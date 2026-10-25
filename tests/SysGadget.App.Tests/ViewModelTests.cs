@@ -53,6 +53,23 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
+        public void LabelMaxWidth_GrowsWithTheCard_ButNeverBelowItsMinimum()
+        {
+            GadgetViewModel view = new GadgetViewModel { SectionWidth = 224 };
+            List<string> raised = new List<string>();
+            view.PropertyChanged += (sender, args) => raised.Add(args.PropertyName!);
+
+            double narrow = view.LabelMaxWidth;
+            view.SectionWidth = 400;
+
+            Assert.Equal(84.0, narrow, 6);
+            Assert.Equal(260.0, view.LabelMaxWidth, 6);
+            Assert.Contains(nameof(GadgetViewModel.LabelMaxWidth), raised);
+            view.SectionWidth = 150;
+            Assert.Equal(64.0, view.LabelMaxWidth, 6);
+        }
+
+        [Fact]
         public void RainbowPalette_RunsFromRedToViolet_EvenlyOverTheCards()
         {
             Color first = RainbowPalette.Accent(0, 7);

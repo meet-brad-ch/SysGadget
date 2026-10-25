@@ -126,7 +126,7 @@ namespace SysGadget.Core
             }),
             new GroupDefinition(SensorsGroup, "Sensors", new[]
             {
-                new ItemDefinition(Temperatures, "Temperatures (LibreHardwareMonitor)", Sources.Temperature, false),
+                new ItemDefinition(Temperatures, "Temperatures (needs administrator rights)", Sources.Temperature, false),
             }),
             new GroupDefinition(SystemGroup, "System", new[]
             {

@@ -1,13 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SysGadget.Core
 {
     /// <summary>Turns source snapshots into the rows an item displays.</summary>
     public static class MeterRowBuilder
     {
-        private static readonly string[] VendorPrefixes = { "NVIDIA ", "GeForce ", "AMD ", "Radeon ", "Intel(R) " };
+        private const int MaxDeviceWords = 3;
+
+        private static readonly string[] VendorWords =
+        {
+            "NVIDIA", "GeForce", "AMD", "Radeon", "Intel(R)", "Intel", "Samsung", "SSD", "NVMe", "WDC", "WD",
+            "Western", "Digital", "Crucial", "Kingston", "Seagate", "Corsair", "SK", "hynix",
+        };
+
+        private static readonly string[] LimitSensorNames = { "Warning Temperature", "Critical Temperature" };
+
+        private static readonly Regex Capacity = new Regex(@"^\d+(\.\d+)?(TB|GB)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         /// <summary>One bar per logical processor.</summary>
         /// <param name="loads">The per-core samples.</param>
@@ -103,36 +115,13 @@ namespace SysGadget.Core
             foreach (TemperatureReading reading in readings)
             {
                 rows.Add(new MeterRow(
-                    readings.Count == 1 ? "Temp" : ShortGpuName(reading.HardwareName),
+                    readings.Count == 1 ? "Temp" : ShortDeviceName(reading.HardwareName),
                     Degrees(reading.Celsius),
                     Math.Max(0.0, Math.Min(100.0, reading.Celsius)),
                     true));
             }
 
             return rows;
-        }
-
-        /// <summary>Drops the vendor words so the name fits a narrow label, for example "RTX 4090".</summary>
-        /// <param name="name">The adapter name as DXGI reports it.</param>
-        /// <returns>The shortened name; the full name when nothing is left after shortening.</returns>
-        public static string ShortGpuName(string name)
-        {
-            string shortened = name;
-            bool changed = true;
-            while (changed)
-            {
-                changed = false;
-                foreach (string prefix in VendorPrefixes)
-                {
-                    if (shortened.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        shortened = shortened.Substring(prefix.Length);
-                        changed = true;
-                    }
-                }
-            }
-
-            return shortened.Length == 0 ? name : shortened;
         }
 
         /// <summary>Throughput of the busiest adapter.</summary>
@@ -183,22 +172,65 @@ namespace SysGadget.Core
             return rows;
         }
 
-        /// <summary>Temperatures; the bar shows degrees on a 0 to 100 scale.</summary>
+        /// <summary>
+        /// Temperatures; the bar shows degrees on a 0 to 100 scale. Alarm limits that drives report as
+        /// sensors ("Warning Temperature", "Critical Temperature") are fixed values, not readings, and
+        /// are left out.
+        /// </summary>
         /// <param name="readings">The sensor readings.</param>
-        /// <returns>One row per sensor, labelled with the sensor name.</returns>
+        /// <returns>One row per reading, labelled "device sensor", for example "990 PRO Composite".</returns>
         public static IReadOnlyList<MeterRow> Temperatures(IReadOnlyList<TemperatureReading> readings)
         {
             List<MeterRow> rows = new List<MeterRow>(readings.Count);
             foreach (TemperatureReading reading in readings)
             {
+                if (Array.IndexOf(LimitSensorNames, reading.SensorName) >= 0)
+                {
+                    continue;
+                }
+
                 rows.Add(new MeterRow(
-                    reading.SensorName,
+                    ShortDeviceName(reading.HardwareName) + " " + ShortSensorName(reading.SensorName),
                     Degrees(reading.Celsius),
                     Math.Max(0.0, Math.Min(100.0, reading.Celsius)),
                     true));
             }
 
             return rows;
+        }
+
+        /// <summary>
+        /// Shortens a device name for a narrow label: vendor words and a capacity ("2TB") are dropped
+        /// and at most three words are kept, for example "Samsung SSD 990 PRO 2TB" gives "990 PRO".
+        /// </summary>
+        /// <param name="name">The device name as Windows or LibreHardwareMonitor reports it.</param>
+        /// <returns>The short name; the full name when nothing is left.</returns>
+        public static string ShortDeviceName(string name)
+        {
+            List<string> kept = new List<string>();
+            foreach (string word in name.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!VendorWords.Contains(word, StringComparer.OrdinalIgnoreCase) && !Capacity.IsMatch(word) && kept.Count < MaxDeviceWords)
+                {
+                    kept.Add(word);
+                }
+            }
+
+            return kept.Count == 0 ? name : string.Join(" ", kept);
+        }
+
+        /// <summary>Drops a leading "GPU" or "CPU" from a sensor name; the device name already says it.</summary>
+        private static string ShortSensorName(string sensor)
+        {
+            foreach (string prefix in new[] { "GPU ", "CPU " })
+            {
+                if (sensor.StartsWith(prefix, StringComparison.Ordinal) && sensor.Length > prefix.Length)
+                {
+                    return sensor.Substring(prefix.Length);
+                }
+            }
+
+            return sensor;
         }
 
         /// <summary>Time of day.</summary>
@@ -219,7 +251,7 @@ namespace SysGadget.Core
 
         private static string GpuLabel(IReadOnlyList<GpuSample> samples, GpuSample sample, string single)
         {
-            return samples.Count == 1 ? single : ShortGpuName(sample.Adapter.Name);
+            return samples.Count == 1 ? single : ShortDeviceName(sample.Adapter.Name);
         }
 
         private static MeterRow Percent(string label, double percent)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -10,6 +11,10 @@ namespace SysGadget.App
     internal sealed class GadgetViewModel : ObservableObject
     {
         private string? status;
+        // card padding and border (20) + bar margins and minimum width (50) + room for a value like "2.2 / 24 GB" (70)
+        private const double RowReserveWidth = 140.0;
+        private const double MinLabelWidth = 64.0;
+
         private double sectionWidth = 224.0;
         private Orientation panelOrientation = Orientation.Vertical;
         private bool thin;
@@ -49,8 +54,18 @@ namespace SysGadget.App
         public double SectionWidth
         {
             get => sectionWidth;
-            set => Set(ref sectionWidth, value);
+            set
+            {
+                Set(ref sectionWidth, value);
+                Raise(nameof(LabelMaxWidth));
+            }
         }
+
+        /// <summary>
+        /// Widest a row label may get: what the card leaves after the bar at its minimum and the value,
+        /// so wider cards show longer labels (sensor names) before they are cut with "...".
+        /// </summary>
+        public double LabelMaxWidth => Math.Max(MinLabelWidth, sectionWidth - RowReserveWidth);
 
         /// <summary>
         /// Shows a new sample. The cards are rebuilt only when the set or order of groups changes,

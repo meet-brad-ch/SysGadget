@@ -19,20 +19,13 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void UnavailableReason_OnlyForTemperature_FollowingSettingsAndFactory()
+        public void UnavailableReason_OnlyForTemperatureWithoutAdmin_AndGpuTemperatureWithoutNvidia()
         {
-            GadgetSettings off = GadgetSettings.CreateDefault();
-            GadgetSettings on = GadgetSettings.CreateDefault();
-            on.UseLibreHardwareMonitor = true;
-
-            Assert.Null(new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Cpu, off));
-            Assert.Equal("Turn on in Settings",
-                new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Temperature, off));
-            Assert.Equal("Needs admin rights",
-                new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Temperature, on));
-            Assert.Null(new MeterRegistry(() => new FakeTemperatures(), true).UnavailableReason(MeterCatalog.Sources.Temperature, on));
-            Assert.Null(new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.GpuTemperature, off));
-            Assert.Equal("No NVIDIA driver", new MeterRegistry(null, false).UnavailableReason(MeterCatalog.Sources.GpuTemperature, off));
+            Assert.Null(new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Cpu));
+            Assert.Equal("Needs admin rights", new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Temperature));
+            Assert.Null(new MeterRegistry(() => new FakeTemperatures(), true).UnavailableReason(MeterCatalog.Sources.Temperature));
+            Assert.Null(new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.GpuTemperature));
+            Assert.Equal("No NVIDIA driver", new MeterRegistry(null, false).UnavailableReason(MeterCatalog.Sources.GpuTemperature));
         }
 
         [Fact]

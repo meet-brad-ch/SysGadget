@@ -130,6 +130,19 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
+        public void ShowsTemperatures_NeedsTheSensorsGroupAndTheTemperatureItem()
+        {
+            GadgetSettings settings = GadgetSettings.CreateDefault();
+            Assert.False(settings.ShowsTemperatures());
+
+            settings.SetItemVisible(MeterCatalog.Temperatures, true);
+            Assert.True(settings.ShowsTemperatures());
+
+            settings.SetGroupVisible(MeterCatalog.SensorsGroup, false);
+            Assert.False(settings.ShowsTemperatures());
+        }
+
+        [Fact]
         public void Lookups_UnknownIds_Throw()
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
@@ -219,7 +232,6 @@ namespace SysGadget.Core.Tests
                 written.Width = 300;
                 written.Opacity = 0.5;
                 written.IntervalMs = 2000;
-                written.UseLibreHardwareMonitor = true;
                 written.UseCompactCores = false;
                 written.ReserveSpace = true;
                 written.Horizontal = false;
@@ -240,7 +252,6 @@ namespace SysGadget.Core.Tests
                 Assert.Equal(300, read.Width);
                 Assert.Equal(0.5, read.Opacity, 6);
                 Assert.Equal(2000, read.IntervalMs);
-                Assert.True(read.UseLibreHardwareMonitor);
                 Assert.False(read.UseCompactCores);
                 Assert.True(read.ReserveSpace);
                 Assert.False(read.Horizontal);
