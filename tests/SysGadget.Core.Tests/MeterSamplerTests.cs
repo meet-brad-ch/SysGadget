@@ -26,9 +26,11 @@ namespace SysGadget.Core.Tests
             }
         }
 
+        /// <summary>Defaults plus this machine's disks, showing only the given items (a per-instance id shows all its instances).</summary>
         private static GadgetSettings OnlyItems(params string[] itemIds)
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
+            settings.AddInstances(new MeterRegistry(null, false).FindInstances());
             foreach (ItemSetting item in settings.Groups.SelectMany(g => g.Items))
             {
                 item.Visible = itemIds.Contains(item.Id);
@@ -93,6 +95,33 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
+        public void Sample_DiskEntries_ShowOnlyTheirDisk_InTheirOrder_AndTheThinBarShowsTheFirstShownDisk()
+        {
+            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, false)))
+            {
+                GadgetSettings settings = OnlyItems(MeterCatalog.Disks);
+                List<ItemSetting> disks = settings.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items;
+                Assert.True(disks.Count >= 2, "this test needs a machine with two disks");
+                string first = disks[0].Instance;
+                string second = disks[1].Instance;
+                settings.PlaceItem(disks[1].Key, disks[0].Key, false); // second disk first
+                settings.SetItemVisible(ItemSetting.MakeKey(MeterCatalog.Disks, first), false);
+
+                GroupSection storage = sampler.Sample(settings, Context).Single();
+
+                Assert.All(storage.Rows, r => Assert.Equal(second, r.Instance));
+                Assert.Equal(second, storage.Rows[0].Label);
+
+                settings.SetItemVisible(ItemSetting.MakeKey(MeterCatalog.Disks, first), true);
+                settings.ThinBar = true;
+                MeterRow thin = sampler.Sample(settings, Context).Single().Rows.Single();
+
+                Assert.Equal(second, thin.Instance);
+                Assert.True(thin.HasBar);
+            }
+        }
+
+        [Fact]
         public void Sample_HiddenGroup_AndGroupWithoutVisibleItems_AreLeftOut()
         {
             using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
@@ -136,7 +165,7 @@ namespace SysGadget.Core.Tests
                 Assert.Equal("Total", sections.Single(s => s.Id == MeterCatalog.CpuGroup).Rows.Single().Label);
                 Assert.Equal("Commit", sections.Single(s => s.Id == MeterCatalog.MemoryGroup).Rows.Single().Label);
                 Assert.Equal("Uptime", sections.Single(s => s.Id == MeterCatalog.SystemGroup).Rows.Single().Label);
-                Assert.Equal("Down", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().Label);
+                Assert.StartsWith("↓", sections.Single(s => s.Id == MeterCatalog.NetworkGroup).Rows.Single().ValueText);
                 Assert.True(sections.Single(s => s.Id == MeterCatalog.StorageGroup).Rows.Single().HasBar);
 
                 settings.UseCompactCores = true;

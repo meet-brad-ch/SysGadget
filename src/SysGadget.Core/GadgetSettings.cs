@@ -79,7 +79,10 @@ namespace SysGadget.Core
         public List<GroupSetting> Groups { get; set; } = new List<GroupSetting>();
 
         /// <summary>Creates the settings of a fresh install.</summary>
-        /// <returns>Defaults with every catalogue group and item present.</returns>
+        /// <returns>
+        /// Defaults with every catalogue group and item present; per-instance items get their entries
+        /// when the instances are found (<see cref="AddInstances"/>).
+        /// </returns>
         public static GadgetSettings CreateDefault()
         {
             GadgetSettings settings = new GadgetSettings();
@@ -100,9 +103,37 @@ namespace SysGadget.Core
             {
                 Id = g.Id,
                 Visible = g.Visible,
-                Items = g.Items.Select(i => new ItemSetting { Id = i.Id, Visible = i.Visible }).ToList(),
+                Items = g.Items.Select(i => new ItemSetting { Id = i.Id, Instance = i.Instance, Visible = i.Visible }).ToList(),
             }).ToList();
             return copy;
+        }
+
+        /// <summary>
+        /// Adds an entry for every found instance that has none yet, at the end of its group, shown or
+        /// hidden as the item's default says.
+        /// </summary>
+        /// <param name="found">The instances found on this machine now.</param>
+        /// <returns>True when an entry was added.</returns>
+        public bool AddInstances(IEnumerable<InstanceRef> found)
+        {
+            bool added = false;
+            foreach (InstanceRef instance in found)
+            {
+                GroupSetting group = FindGroup(MeterCatalog.GroupOf(instance.ItemId).Id);
+                string key = ItemSetting.MakeKey(instance.ItemId, instance.Instance);
+                if (!group.Items.Any(i => i.Key == key))
+                {
+                    group.Items.Add(new ItemSetting
+                    {
+                        Id = instance.ItemId,
+                        Instance = instance.Instance,
+                        Visible = MeterCatalog.GetItem(instance.ItemId).VisibleByDefault,
+                    });
+                    added = true;
+                }
+            }
+
+            return added;
         }
 
         /// <summary>Whether a group is shown.</summary>
@@ -121,20 +152,20 @@ namespace SysGadget.Core
             FindGroup(groupId).Visible = visible;
         }
 
-        /// <summary>Whether an item is shown, by its own setting (the group may still be hidden).</summary>
-        /// <param name="itemId">The item id.</param>
+        /// <summary>Whether an entry is shown, by its own setting (the group may still be hidden).</summary>
+        /// <param name="key">The entry key: an item id, or "id|instance" for one disk.</param>
         /// <returns>True when shown.</returns>
-        public bool IsItemVisible(string itemId)
+        public bool IsItemVisible(string key)
         {
-            return FindItem(itemId).Visible;
+            return FindItem(key).Visible;
         }
 
-        /// <summary>Shows or hides an item.</summary>
-        /// <param name="itemId">The item id.</param>
+        /// <summary>Shows or hides an entry.</summary>
+        /// <param name="key">The entry key: an item id, or "id|instance" for one disk.</param>
         /// <param name="visible">The new state.</param>
-        public void SetItemVisible(string itemId, bool visible)
+        public void SetItemVisible(string key, bool visible)
         {
-            FindItem(itemId).Visible = visible;
+            FindItem(key).Visible = visible;
         }
 
         /// <summary>Puts a group right before or after another group (a drag and drop).</summary>
@@ -146,20 +177,20 @@ namespace SysGadget.Core
             Place(Groups, FindGroup(groupId), FindGroup(targetGroupId), after);
         }
 
-        /// <summary>Puts an item right before or after another item of the same group (a drag and drop).</summary>
-        /// <param name="itemId">The item to move.</param>
-        /// <param name="targetItemId">The item it is dropped on.</param>
+        /// <summary>Puts an entry right before or after another entry of the same group (a drag and drop).</summary>
+        /// <param name="key">The entry to move.</param>
+        /// <param name="targetKey">The entry it is dropped on.</param>
         /// <param name="after">True places it after the target, false before.</param>
-        /// <exception cref="InvalidOperationException">The items belong to different groups.</exception>
-        public void PlaceItem(string itemId, string targetItemId, bool after)
+        /// <exception cref="InvalidOperationException">The entries belong to different groups.</exception>
+        public void PlaceItem(string key, string targetKey, bool after)
         {
-            string groupId = MeterCatalog.GroupOf(itemId).Id;
-            if (MeterCatalog.GroupOf(targetItemId).Id != groupId)
+            string groupId = MeterCatalog.GroupOf(ItemSetting.ItemIdOf(key)).Id;
+            if (MeterCatalog.GroupOf(ItemSetting.ItemIdOf(targetKey)).Id != groupId)
             {
-                throw new InvalidOperationException("Item '" + itemId + "' cannot move into another group than '" + groupId + "'.");
+                throw new InvalidOperationException("Item '" + key + "' cannot move into another group than '" + groupId + "'.");
             }
 
-            Place(FindGroup(groupId).Items, FindItem(itemId), FindItem(targetItemId), after);
+            Place(FindGroup(groupId).Items, FindItem(key), FindItem(targetKey), after);
         }
 
         /// <summary>
@@ -174,8 +205,22 @@ namespace SysGadget.Core
                 "IntervalMs must be " + MinIntervalMs + " to " + MaxIntervalMs + ".");
             Require(Opacity >= MinOpacity && Opacity <= 1.0, "Opacity must be " + MinOpacity + " to 1.");
             Require(MonitorIndex >= 0, "MonitorIndex must not be negative.");
+            DropSingleInstanceEntries();
             ValidateGroups();
             AddMissing();
+        }
+
+        /// <summary>
+        /// Files written before disks had one entry each hold a single entry without an instance for
+        /// the disk item; it is dropped and the disks get their own entries when found.
+        /// </summary>
+        private void DropSingleInstanceEntries()
+        {
+            foreach (GroupSetting group in Groups)
+            {
+                group.Items.RemoveAll(i => i.Instance.Length == 0
+                    && MeterCatalog.Groups.SelectMany(g => g.Items).Any(d => d.Id == i.Id && d.PerInstance));
+            }
         }
 
         private void ValidateGroups()
@@ -195,9 +240,13 @@ namespace SysGadget.Core
             HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (ItemSetting item in group.Items)
             {
-                Require(definition.Items.Any(d => d.Id == item.Id),
-                    "Item '" + item.Id + "' does not belong to group '" + group.Id + "'.");
-                Require(seen.Add(item.Id), "Item '" + item.Id + "' is listed twice.");
+                ItemDefinition? itemDefinition = definition.Items.FirstOrDefault(d => d.Id == item.Id);
+                Require(itemDefinition != null, "Item '" + item.Id + "' does not belong to group '" + group.Id + "'.");
+                Require(itemDefinition!.PerInstance == (item.Instance.Length > 0),
+                    itemDefinition.PerInstance
+                        ? "Item '" + item.Id + "' needs an instance."
+                        : "Item '" + item.Id + "' has no instances, but '" + item.Instance + "' is given.");
+                Require(seen.Add(item.Key), "Item '" + item.Key + "' is listed twice.");
             }
         }
 
@@ -212,7 +261,7 @@ namespace SysGadget.Core
                     continue;
                 }
 
-                foreach (ItemDefinition item in definition.Items)
+                foreach (ItemDefinition item in definition.Items.Where(d => !d.PerInstance))
                 {
                     if (!group.Items.Any(i => i.Id == item.Id))
                     {
@@ -228,7 +277,10 @@ namespace SysGadget.Core
             {
                 Id = definition.Id,
                 Visible = true,
-                Items = definition.Items.Select(i => new ItemSetting { Id = i.Id, Visible = i.VisibleByDefault }).ToList(),
+                Items = definition.Items
+                    .Where(i => !i.PerInstance)
+                    .Select(i => new ItemSetting { Id = i.Id, Visible = i.VisibleByDefault })
+                    .ToList(),
             };
         }
 
@@ -238,11 +290,11 @@ namespace SysGadget.Core
             return group ?? throw new KeyNotFoundException("Group '" + groupId + "' is not in the settings.");
         }
 
-        private ItemSetting FindItem(string itemId)
+        private ItemSetting FindItem(string key)
         {
-            GroupSetting group = FindGroup(MeterCatalog.GroupOf(itemId).Id);
-            ItemSetting? item = group.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
-            return item ?? throw new KeyNotFoundException("Item '" + itemId + "' is not in the settings.");
+            GroupSetting group = FindGroup(MeterCatalog.GroupOf(ItemSetting.ItemIdOf(key)).Id);
+            ItemSetting? item = group.Items.FirstOrDefault(i => string.Equals(i.Key, key, StringComparison.Ordinal));
+            return item ?? throw new KeyNotFoundException("Item '" + key + "' is not in the settings.");
         }
 
         private static void Place<T>(List<T> list, T entry, T target, bool after)

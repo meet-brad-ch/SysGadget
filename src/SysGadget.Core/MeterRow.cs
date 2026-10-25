@@ -9,13 +9,15 @@ namespace SysGadget.Core
         /// <param name="percent">Bar fill, 0 to 100; ignored without a bar.</param>
         /// <param name="hasBar">Whether the row draws a bar.</param>
         /// <param name="compact">True draws the row as one thin cell of a strip instead of a line.</param>
-        public MeterRow(string label, string valueText, double percent, bool hasBar, bool compact = false)
+        /// <param name="instance">The instance the row belongs to (the disk), for per-instance items; empty otherwise.</param>
+        public MeterRow(string label, string valueText, double percent, bool hasBar, bool compact = false, string instance = "")
         {
             Label = label;
             ValueText = valueText;
             Percent = percent;
             HasBar = hasBar;
             Compact = compact;
+            Instance = instance;
         }
 
         /// <summary>Left text.</summary>
@@ -32,5 +34,8 @@ namespace SysGadget.Core
 
         /// <summary>True draws the row as one thin cell of a strip instead of a line.</summary>
         public bool Compact { get; }
+
+        /// <summary>The instance the row belongs to (the disk), for per-instance items; empty otherwise.</summary>
+        public string Instance { get; }
     }
 }

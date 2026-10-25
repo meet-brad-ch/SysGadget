@@ -32,7 +32,7 @@ namespace SysGadget.App
         /// </summary>
         public bool IsFirstShown => parent != null && IsChecked && parent.Children.FirstOrDefault(c => c.IsChecked) == this;
 
-        /// <summary>Group or item id.</summary>
+        /// <summary>Group id, or the entry key of an item ("id", or "id|instance" for one disk).</summary>
         public string Id { get; }
 
         /// <summary>Name from the catalogue.</summary>
@@ -116,9 +116,10 @@ namespace SysGadget.App
                 };
                 foreach (ItemSetting item in group.Items)
                 {
-                    node.Children.Add(new SettingsTreeNode(working, item.Id, MeterCatalog.GetItem(item.Id).Title, false, node)
+                    string title = MeterCatalog.GetItem(item.Id).Title + (item.Instance.Length > 0 ? " " + item.Instance : string.Empty);
+                    node.Children.Add(new SettingsTreeNode(working, item.Key, title, false, node)
                     {
-                        IsSelected = item.Id == selectedId,
+                        IsSelected = item.Key == selectedId,
                     });
                 }
 

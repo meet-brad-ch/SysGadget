@@ -84,7 +84,7 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Network_ShowsDownAndUpOfTheBusiestAdapter_WithoutBars()
+        public void Network_ShowsDownAndUpOfTheBusiestAdapter_OnOneRow_WithoutBar()
         {
             IReadOnlyList<MeterRow> rows = MeterRowBuilder.Network(new[]
             {
@@ -92,12 +92,9 @@ namespace SysGadget.Core.Tests
                 new NetworkSample("b", 10, 10),
             });
 
-            Assert.Equal(2, rows.Count);
-            Assert.Equal("Down", rows[0].Label);
-            Assert.Equal("2.0 KB/s", rows[0].ValueText);
-            Assert.Equal("Up", rows[1].Label);
-            Assert.Equal("1.0 KB/s", rows[1].ValueText);
-            Assert.False(rows[0].HasBar);
+            MeterRow row = Assert.Single(rows);
+            Assert.Equal("↓ 2.0 KB/s   ↑ 1.0 KB/s", row.ValueText);
+            Assert.False(row.HasBar);
             Assert.Empty(MeterRowBuilder.Network(new NetworkSample[0]));
         }
 
@@ -122,6 +119,7 @@ namespace SysGadget.Core.Tests
             Assert.True(rows[0].HasBar);
             Assert.Equal("R 1.0 KB/s  W 0 B/s", rows[1].ValueText);
             Assert.False(rows[1].HasBar);
+            Assert.All(rows, r => Assert.Equal("1 c:", r.Instance));
         }
 
         [Fact]

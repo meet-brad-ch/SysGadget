@@ -14,6 +14,8 @@ namespace SysGadget.Core
         private readonly Dictionary<string, Func<object, GadgetSettings, IReadOnlyList<MeterRow>>> items =
             new Dictionary<string, Func<object, GadgetSettings, IReadOnlyList<MeterRow>>>();
 
+        private readonly Dictionary<string, Func<IReadOnlyList<string>>> instanceLists = new Dictionary<string, Func<IReadOnlyList<string>>>();
+
         private readonly Func<ITemperatureSource>? temperatureFactory;
         private readonly bool nvidiaInstalled;
 
@@ -29,7 +31,24 @@ namespace SysGadget.Core
             this.nvidiaInstalled = nvidiaInstalled;
             AddSources();
             AddItems();
+            instanceLists[MeterCatalog.Disks] = DiskProvider.InstanceNames;
             CheckCoverage();
+        }
+
+        /// <summary>Lists the instances of every per-instance item on this machine now, without sampling.</summary>
+        /// <returns>One reference per instance, for example per disk.</returns>
+        public IReadOnlyList<InstanceRef> FindInstances()
+        {
+            List<InstanceRef> found = new List<InstanceRef>();
+            foreach (KeyValuePair<string, Func<IReadOnlyList<string>>> list in instanceLists)
+            {
+                foreach (string instance in list.Value())
+                {
+                    found.Add(new InstanceRef(list.Key, instance));
+                }
+            }
+
+            return found;
         }
 
         /// <summary>Why a source cannot be opened now, or null when it can.</summary>
@@ -147,6 +166,11 @@ namespace SysGadget.Core
                     if (!items.ContainsKey(item.Id) || !sources.ContainsKey(item.SourceId))
                     {
                         throw new InvalidOperationException("Item '" + item.Id + "' has no row function or no source.");
+                    }
+
+                    if (item.PerInstance != instanceLists.ContainsKey(item.Id))
+                    {
+                        throw new InvalidOperationException("Item '" + item.Id + "' and its instance list do not match.");
                     }
                 }
             }

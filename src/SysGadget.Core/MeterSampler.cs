@@ -69,6 +69,12 @@ namespace SysGadget.Core
             foreach (ItemSetting item in ShownItems(group, settings))
             {
                 IReadOnlyList<MeterRow> itemRows = ItemRows(item.Id, settings, snapshots);
+                if (item.Instance.Length > 0)
+                {
+                    // one entry per disk: only that disk's rows (a disk that is gone shows nothing)
+                    itemRows = itemRows.Where(r => r.Instance == item.Instance).ToList();
+                }
+
                 rows.AddRange(settings.ThinBar ? FirstLine(itemRows) : itemRows);
             }
 

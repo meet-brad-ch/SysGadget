@@ -36,6 +36,18 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
+        public void FindInstances_ListsThisMachinesDisks_AsSpelledByTheSampler()
+        {
+            IReadOnlyList<InstanceRef> found = new MeterRegistry(null, false).FindInstances();
+
+            Assert.NotEmpty(found);
+            Assert.All(found, f => Assert.Equal(MeterCatalog.Disks, f.ItemId));
+            Assert.Equal(
+                new DiskProvider().Read().Select(d => d.Name).OrderBy(n => n, System.StringComparer.Ordinal),
+                found.Select(f => f.Instance));
+        }
+
+        [Fact]
         public void Rows_ClockItems_ReadTheInjectedContext()
         {
             MeterRegistry registry = new MeterRegistry(null, true);

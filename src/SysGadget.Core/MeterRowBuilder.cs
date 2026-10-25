@@ -137,7 +137,7 @@ namespace SysGadget.Core
 
         /// <summary>Throughput of the busiest adapter.</summary>
         /// <param name="samples">The network samples, busiest first.</param>
-        /// <returns>"Down" and "Up" rows without bars; none when there is no adapter.</returns>
+        /// <returns>One row without a bar, "↓ down  ↑ up"; none when there is no adapter.</returns>
         public static IReadOnlyList<MeterRow> Network(IReadOnlyList<NetworkSample> samples)
         {
             if (samples.Count == 0)
@@ -147,25 +147,33 @@ namespace SysGadget.Core
 
             return new[]
             {
-                new MeterRow("Down", ByteFormat.Rate(samples[0].ReceivedBytesPerSecond), 0.0, false),
-                new MeterRow("Up", ByteFormat.Rate(samples[0].SentBytesPerSecond), 0.0, false),
+                new MeterRow(
+                    string.Empty,
+                    "↓ " + ByteFormat.Rate(samples[0].ReceivedBytesPerSecond) + "   ↑ " + ByteFormat.Rate(samples[0].SentBytesPerSecond),
+                    0.0,
+                    false),
             };
         }
 
         /// <summary>Busy time per disk, with the rates on a second line.</summary>
         /// <param name="samples">The disk samples.</param>
-        /// <returns>Two rows per disk: the busy bar, then the read and write rates without a bar.</returns>
+        /// <returns>
+        /// Two rows per disk, both tagged with the disk as their instance: the busy bar, then the read
+        /// and write rates without a bar.
+        /// </returns>
         public static IReadOnlyList<MeterRow> Disks(IReadOnlyList<DiskSample> samples)
         {
             List<MeterRow> rows = new List<MeterRow>(samples.Count * 2);
             foreach (DiskSample sample in samples)
             {
-                rows.Add(Percent(sample.Name, sample.BusyPercent));
+                rows.Add(new MeterRow(sample.Name, PercentText(sample.BusyPercent), sample.BusyPercent, true, false, sample.Name));
                 rows.Add(new MeterRow(
                     string.Empty,
                     "R " + ByteFormat.Rate(sample.ReadBytesPerSecond) + "  W " + ByteFormat.Rate(sample.WriteBytesPerSecond),
                     0.0,
-                    false));
+                    false,
+                    false,
+                    sample.Name));
             }
 
             return rows;

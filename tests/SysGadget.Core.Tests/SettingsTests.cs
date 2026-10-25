@@ -14,14 +14,16 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void CreateDefault_MirrorsTheCatalogue_GroupsAndItemsInOrder()
+        public void CreateDefault_MirrorsTheCatalogue_GroupsAndItemsInOrder_WithoutInstances()
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
 
             Assert.Equal(MeterCatalog.Groups.Select(g => g.Id), settings.Groups.Select(g => g.Id));
             for (int i = 0; i < settings.Groups.Count; i++)
             {
-                Assert.Equal(MeterCatalog.Groups[i].Items.Select(d => d.Id), settings.Groups[i].Items.Select(s => s.Id));
+                Assert.Equal(
+                    MeterCatalog.Groups[i].Items.Where(d => !d.PerInstance).Select(d => d.Id),
+                    settings.Groups[i].Items.Select(s => s.Id));
             }
 
             Assert.True(settings.IsItemVisible(MeterCatalog.CpuCores));
@@ -64,6 +66,51 @@ namespace SysGadget.Core.Tests
             settings.PlaceGroup(MeterCatalog.CpuGroup, MeterCatalog.CpuGroup, true);
             Assert.Equal(MeterCatalog.CpuGroup, settings.Groups[0].Id);
             Assert.Equal(MeterCatalog.Groups.Count, settings.Groups.Count);
+        }
+
+        [Fact]
+        public void AddInstances_AddsEachDiskOnce_AtTheEnd_WithTheItemDefault()
+        {
+            GadgetSettings settings = GadgetSettings.CreateDefault();
+            InstanceRef[] disks = { new InstanceRef(MeterCatalog.Disks, "0 D:"), new InstanceRef(MeterCatalog.Disks, "1 C:") };
+
+            Assert.True(settings.AddInstances(disks));
+            Assert.False(settings.AddInstances(disks));
+
+            GroupSetting storage = settings.Groups.Single(g => g.Id == MeterCatalog.StorageGroup);
+            Assert.Equal(new[] { "storage.disks|0 D:", "storage.disks|1 C:" }, storage.Items.Select(i => i.Key));
+            Assert.True(settings.IsItemVisible("storage.disks|1 C:"));
+
+            settings.PlaceItem("storage.disks|1 C:", "storage.disks|0 D:", false);
+            Assert.Equal("1 C:", storage.Items[0].Instance);
+        }
+
+        [Fact]
+        public void Validate_DropsTheOldSingleDiskEntry_AndRefusesBadInstances()
+        {
+            GadgetSettings old = GadgetSettings.CreateDefault();
+            old.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items.Add(new ItemSetting { Id = MeterCatalog.Disks, Visible = true });
+            GadgetSettings instanceOnPlainItem = GadgetSettings.CreateDefault();
+            instanceOnPlainItem.Groups[0].Items[0].Instance = "x";
+            GadgetSettings repeatedDisk = GadgetSettings.CreateDefault();
+            repeatedDisk.AddInstances(new[] { new InstanceRef(MeterCatalog.Disks, "0 D:") });
+            repeatedDisk.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items
+                .Add(new ItemSetting { Id = MeterCatalog.Disks, Instance = "0 D:", Visible = true });
+
+            old.Validate();
+
+            Assert.Empty(old.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items);
+            Assert.Throws<InvalidDataException>(() => instanceOnPlainItem.Validate());
+            Assert.Throws<InvalidDataException>(() => repeatedDisk.Validate());
+        }
+
+        [Fact]
+        public void ItemSetting_Keys_JoinAndSplit()
+        {
+            Assert.Equal("cpu.total", ItemSetting.MakeKey("cpu.total", string.Empty));
+            Assert.Equal("storage.disks|1 C:", ItemSetting.MakeKey("storage.disks", "1 C:"));
+            Assert.Equal("storage.disks", ItemSetting.ItemIdOf("storage.disks|1 C:"));
+            Assert.Equal("cpu.total", ItemSetting.ItemIdOf("cpu.total"));
         }
 
         [Fact]

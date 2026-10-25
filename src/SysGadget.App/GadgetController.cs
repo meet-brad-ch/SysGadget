@@ -25,6 +25,7 @@ namespace SysGadget.App
         private readonly DispatcherTimer timer = new DispatcherTimer();
         private readonly AppBarDocker docker;
         private GadgetSettings settings;
+        private readonly MeterRegistry registry = CreateRegistry();
         private readonly Replaceable<MeterSampler> samplers;
         private SettingsWindow? settingsWindow;
         private bool sampling;
@@ -64,7 +65,9 @@ namespace SysGadget.App
         /// <summary>Shows the gadget and starts sampling.</summary>
         public void Start()
         {
-            ApplySettings(settings);
+            GadgetSettings withInstances = settings.Clone();
+            withInstances.AddInstances(registry.FindInstances()); // disks added since the last run
+            ApplySettings(withInstances);
             window.Show();
             ApplyLayout();
             OnTick(this, EventArgs.Empty);
@@ -80,10 +83,15 @@ namespace SysGadget.App
             window.Close();
         }
 
-        private static MeterSampler CreateSampler()
+        private static MeterRegistry CreateRegistry()
         {
             Func<ITemperatureSource>? temperatures = Elevation.IsAdministrator() ? Elevation.OpenTemperatureSource : null;
-            return new MeterSampler(new MeterRegistry(temperatures, NvmlTemperatureProvider.IsInstalled()));
+            return new MeterRegistry(temperatures, NvmlTemperatureProvider.IsInstalled());
+        }
+
+        private MeterSampler CreateSampler()
+        {
+            return new MeterSampler(registry);
         }
 
         private void ApplySettings(GadgetSettings next)
@@ -320,6 +328,12 @@ namespace SysGadget.App
             {
                 settingsWindow.Activate();
                 return;
+            }
+
+            GadgetSettings withInstances = settings.Clone();
+            if (withInstances.AddInstances(registry.FindInstances()))
+            {
+                ApplySettings(withInstances); // a disk plugged in meanwhile gets its entry in the tree
             }
 
             string[] monitors = Screen.AllScreens

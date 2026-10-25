@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace SysGadget.Core
 {
@@ -11,7 +12,29 @@ namespace SysGadget.Core
         private const string WriteCounter = "Disk Write Bytes/sec";
         private const string TotalInstance = "_total";
 
-        private readonly CategoryRateReader reader = new CategoryRateReader("PhysicalDisk", BusyCounter, ReadCounter, WriteCounter);
+        private const string Category = "PhysicalDisk";
+
+        private readonly CategoryRateReader reader = new CategoryRateReader(Category, BusyCounter, ReadCounter, WriteCounter);
+
+        /// <summary>
+        /// Lists the physical disks without sampling them, spelled exactly as <see cref="Read"/> names them
+        /// (both come from the same counter data).
+        /// </summary>
+        /// <returns>The disk names, sorted.</returns>
+        public static IReadOnlyList<string> InstanceNames()
+        {
+            List<string> names = new List<string>();
+            foreach (InstanceData instance in new PerformanceCounterCategory(Category).ReadCategory()[BusyCounter].Values)
+            {
+                if (!string.Equals(instance.InstanceName, TotalInstance, StringComparison.OrdinalIgnoreCase))
+                {
+                    names.Add(instance.InstanceName);
+                }
+            }
+
+            names.Sort(string.CompareOrdinal);
+            return names;
+        }
 
         /// <summary>Samples every disk. Values cover the time since the previous call.</summary>
         /// <returns>One entry per physical disk, sorted by name.</returns>

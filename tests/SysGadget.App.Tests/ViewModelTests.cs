@@ -142,6 +142,25 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
+        public void SettingsTreeNode_EachDisk_IsItsOwnEntry_ThatCanBeTickedAndAccepted()
+        {
+            GadgetSettings working = GadgetSettings.CreateDefault();
+            working.AddInstances(new[] { new InstanceRef(MeterCatalog.Disks, "0 D:"), new InstanceRef(MeterCatalog.Disks, "1 C:") });
+
+            List<SettingsTreeNode> tree = SettingsTreeNode.Build(working, new HashSet<string>(), null);
+            SettingsTreeNode storage = tree.Single(n => n.Id == MeterCatalog.StorageGroup);
+
+            Assert.Equal(new[] { "Disk 0 D:", "Disk 1 C:" }, storage.Children.Select(c => c.Title));
+            Assert.True(storage.Children[0].Accepts(storage.Children[1]));
+            Assert.True(storage.Children[0].IsFirstShown);
+
+            storage.Children[0].IsChecked = false;
+
+            Assert.False(working.IsItemVisible("storage.disks|0 D:"));
+            Assert.True(storage.Children[1].IsFirstShown);
+        }
+
+        [Fact]
         public void SettingsTreeNode_Checkboxes_WriteIntoTheSettings_InDisplayOrder()
         {
             GadgetSettings working = GadgetSettings.CreateDefault();

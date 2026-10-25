@@ -26,6 +26,7 @@
     <Compile Include="GroupSection.cs" />
     <Compile Include="GroupSetting.cs" />
     <Compile Include="ITemperatureSource.cs" />
+    <Compile Include="InstanceRef.cs" />
     <Compile Include="ItemDefinition.cs" />
     <Compile Include="ItemSetting.cs" />
     <Compile Include="MemoryProvider.cs" />

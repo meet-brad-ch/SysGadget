@@ -73,7 +73,7 @@ namespace SysGadget.Core
         /// <summary>Id of the storage group.</summary>
         public const string StorageGroup = "storage";
 
-        /// <summary>Id of the disk activity item.</summary>
+        /// <summary>Id of the disk activity item; one settings entry per disk.</summary>
         public const string Disks = "storage.disks";
 
         /// <summary>Id of the network group.</summary>
@@ -118,7 +118,7 @@ namespace SysGadget.Core
             }),
             new GroupDefinition(StorageGroup, "Storage", new[]
             {
-                new ItemDefinition(Disks, "Disk activity", Sources.Disk, false),
+                new ItemDefinition(Disks, "Disk", Sources.Disk, true, perInstance: true),
             }),
             new GroupDefinition(NetworkGroup, "Network", new[]
             {
