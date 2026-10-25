@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using SysGadget.Core;
@@ -41,6 +42,7 @@ namespace SysGadget.App
 
             docker.PositionChanged += ApplyLayout;
             window.DpiChanged += (sender, args) => ApplyLayout();
+            window.SizeChanged += (sender, args) => KeepDefaultFloatingPlace();
             window.SettingsRequested += ShowSettings;
             tray.SettingsRequested += ShowSettings;
             window.ExitRequested += RequestExit;
@@ -123,6 +125,7 @@ namespace SysGadget.App
             window.Opacity = settings.Opacity;
             window.Topmost = settings.AlwaysOnTop;
             window.DragEnabled = settings.Edge == DockEdge.Floating;
+            viewModel.PanelOrientation = SideBySide() ? Orientation.Horizontal : Orientation.Vertical;
 
             if (settings.Edge == DockEdge.Floating)
             {
@@ -138,17 +141,56 @@ namespace SysGadget.App
             }
         }
 
+        /// <summary>
+        /// A floating window that was never dragged keeps its default place (centred columns) while
+        /// its size changes, for example when the first sample fills it.
+        /// </summary>
+        private void KeepDefaultFloatingPlace()
+        {
+            if (settings.Edge == DockEdge.Floating && !settings.FloatingLeft.HasValue)
+            {
+                ApplyLayout();
+            }
+        }
+
+        /// <summary>Whether the cards sit side by side as columns.</summary>
+        private bool SideBySide()
+        {
+            switch (settings.Edge)
+            {
+                case DockEdge.Top:
+                case DockEdge.Bottom:
+                    return true;
+                case DockEdge.Floating:
+                    return settings.Horizontal;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// A free window at its saved place; without one, columns start centred at the top of the
+        /// work area and a stack starts at the top right.
+        /// </summary>
         private void PlaceFloating(Screen screen, double scale)
         {
             docker.Undock();
-            window.SizeToContent = SizeToContent.Height;
-            window.Width = settings.Width;
-            int left = settings.FloatingLeft.HasValue
-                ? (int)settings.FloatingLeft.Value
-                : screen.WorkingArea.Right - (int)(settings.Width * scale) - FloatingMarginPx;
-            int top = settings.FloatingTop.HasValue ? (int)settings.FloatingTop.Value : screen.WorkingArea.Top + FloatingMarginPx;
-            window.Left = left / scale;
-            window.Top = top / scale;
+            Rectangle area = screen.WorkingArea;
+            if (settings.Horizontal)
+            {
+                window.SizeToContent = SizeToContent.WidthAndHeight;
+            }
+            else
+            {
+                window.SizeToContent = SizeToContent.Height;
+                window.Width = settings.Width;
+            }
+
+            window.UpdateLayout();
+            double widthPx = window.ActualWidth * scale;
+            double defaultLeft = settings.Horizontal ? area.Left + ((area.Width - widthPx) / 2) : area.Right - widthPx - FloatingMarginPx;
+            window.Left = (settings.FloatingLeft ?? defaultLeft) / scale;
+            window.Top = (settings.FloatingTop ?? area.Top + FloatingMarginPx) / scale;
         }
 
         /// <summary>Against the edge, only as tall as the cards, reserving no screen space.</summary>

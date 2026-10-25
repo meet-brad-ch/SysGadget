@@ -24,7 +24,13 @@ namespace SysGadget.Core
         public const double MinOpacity = 0.2;
 
         /// <summary>Edge to dock to.</summary>
-        public DockEdge Edge { get; set; } = DockEdge.Right;
+        public DockEdge Edge { get; set; } = DockEdge.Floating;
+
+        /// <summary>
+        /// Floating window: the groups sit side by side as columns (true) or stacked (false).
+        /// Left and right docking always stack them; top and bottom docking always put them side by side.
+        /// </summary>
+        public bool Horizontal { get; set; } = true;
 
         /// <summary>Zero-based index of the monitor, in the order Windows lists them.</summary>
         public int MonitorIndex { get; set; }

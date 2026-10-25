@@ -1,10 +1,10 @@
 # SysGadget
 
-**What:** A small always-on-top Windows gadget, docked at a screen edge, that shows CPU load per core, memory, and GPU load, memory and temperature.
+**What:** A small always-on-top Windows gadget that shows CPU load per core, memory, and GPU load, memory and temperature — by default a floating strip with one column per group at the top of the screen; it can also dock to a screen edge.
 
 **Why:** Replaces the old Windows desktop gadgets that gave useful system information at a glance. Every group and item can be shown or hidden, and the dock edge and always-on-top are configurable.
 
-**Status:** working — CPU, memory, GPU (load, VRAM, temperature), storage, network, system and optional LibreHardwareMonitor temperatures; docking with reserved screen space; settings window; tray icon. No installer yet.
+**Status:** working — CPU, memory, GPU (load, VRAM, temperature), storage, network, system and optional LibreHardwareMonitor temperatures; floating window (columns or stack) or docking (overlay, or reserving the edge); settings window; tray icon. No installer yet.
 
 ## How to run
 
@@ -24,8 +24,8 @@ dotnet test tests/SysGadget.App.Tests
 ## Use
 
 - Right-click the gadget or its tray icon: Settings, Always on top, Exit.
-- Click a group title to collapse or expand the group.
-- Settings: dock edge (left, right, top, bottom, floating), monitor, width (200 to 800), opacity, update interval, compact core strip, and a tree of groups and items with checkboxes and Up/Down ordering.
+- Click a group title to collapse or expand the group. Drag the floating window anywhere; its place is kept.
+- Settings: dock edge (floating, left, right, top, bottom), monitor, width of a card (200 to 800), opacity, update interval, columns or stack for the floating window, reserve screen space when docked, compact core strip, and a tree of groups and items with checkboxes and Up/Down ordering.
 
 ## Layout
 
@@ -49,6 +49,8 @@ dotnet test tests/SysGadget.App.Tests
 - 2026-10-25 — A hidden item is not sampled; its source is closed when no visible item needs it.
 - 2026-10-25 — GPU temperature through NVML: works without admin rights, NVIDIA only.
 - 2026-10-25 — Minimum width 200: label, a bar at its 36 px minimum and the value always fit on one line.
+- 2026-10-25 — Docking does not reserve the edge by default: Windows reserves an app bar's whole edge, which left half the strip empty; the overlay is only as tall as its cards.
+- 2026-10-25 — Default is a floating window with one column per group, centred at the top; the cards are coloured as a rainbow by position.
 
 ---
 

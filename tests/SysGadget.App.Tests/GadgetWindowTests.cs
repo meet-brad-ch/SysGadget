@@ -15,8 +15,10 @@ namespace SysGadget.App.Tests
         /// The window is shown far off-screen so the dispatcher really builds every template: card header,
         /// line rows with and without bars, the compact strip and a collapsed card.
         /// </summary>
-        [Fact]
-        public void Layout_OfEveryTemplate_RaisesNoDispatcherException_AndFillsTheWindow()
+        [Theory]
+        [InlineData(System.Windows.Controls.Orientation.Vertical)]
+        [InlineData(System.Windows.Controls.Orientation.Horizontal)]
+        public void Layout_OfEveryTemplate_RaisesNoDispatcherException_AndFillsTheWindow(System.Windows.Controls.Orientation orientation)
         {
             StaRunner.Run(() =>
             {
@@ -27,13 +29,17 @@ namespace SysGadget.App.Tests
                     args.Handled = true;
                 };
 
-                GadgetViewModel viewModel = new GadgetViewModel();
+                GadgetViewModel viewModel = new GadgetViewModel { PanelOrientation = orientation };
                 GadgetWindow window = new GadgetWindow(viewModel)
                 {
                     WindowStartupLocation = WindowStartupLocation.Manual,
                     Left = -20000,
                     Top = 0,
                     ShowActivated = false,
+                    // as GadgetController sets it: columns size the window in both directions
+                    SizeToContent = orientation == System.Windows.Controls.Orientation.Horizontal
+                        ? SizeToContent.WidthAndHeight
+                        : SizeToContent.Height,
                 };
                 viewModel.Update(new[]
                 {
@@ -57,10 +63,15 @@ namespace SysGadget.App.Tests
                 window.Show();
                 Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
                 double height = window.ActualHeight;
+                double columnsWidth = ((FrameworkElement)window.Content).ActualWidth;
                 window.Close();
 
                 Assert.Empty(dispatcherErrors);
                 Assert.True(height > 80, "the cards were not laid out, height " + height);
+                if (orientation == System.Windows.Controls.Orientation.Horizontal)
+                {
+                    Assert.True(columnsWidth > 3 * viewModel.SectionWidth, "the three cards are not side by side, width " + columnsWidth);
+                }
             });
         }
     }

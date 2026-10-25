@@ -56,6 +56,9 @@
                       IsChecked="{Binding AlwaysOnTop}" />
         </Grid>
 
+        <CheckBox Margin="0,4,0,0" IsChecked="{Binding Horizontal}"
+                  Content="Floating window: groups side by side as columns" />
+
         <CheckBox Margin="0,4,0,0" IsChecked="{Binding ReserveSpace}"
                   Content="Reserve screen space (maximised windows stop at the gadget)" />
 

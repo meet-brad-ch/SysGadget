@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Controls;
 using SysGadget.Core;
 
 namespace SysGadget.App
@@ -10,6 +11,14 @@ namespace SysGadget.App
     {
         private string? status;
         private double sectionWidth = 224.0;
+        private Orientation panelOrientation = Orientation.Vertical;
+
+        /// <summary>Columns side by side (horizontal) or cards stacked (vertical).</summary>
+        public Orientation PanelOrientation
+        {
+            get => panelOrientation;
+            set => Set(ref panelOrientation, value);
+        }
 
         /// <summary>The visible groups in display order.</summary>
         public ObservableCollection<GroupViewModel> Groups { get; } = new ObservableCollection<GroupViewModel>();
@@ -28,10 +37,7 @@ namespace SysGadget.App
         /// <summary>Whether the error line is shown.</summary>
         public bool HasStatus => status != null;
 
-        /// <summary>
-        /// Width of one card. The cards wrap, so they stack in a narrow window (left or right
-        /// docking) and sit side by side in a wide one (top or bottom docking).
-        /// </summary>
+        /// <summary>Width of one card (one column when the cards sit side by side).</summary>
         public double SectionWidth
         {
             get => sectionWidth;

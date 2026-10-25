@@ -186,7 +186,8 @@
             <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupTemplate}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
+                        <!-- Side by side, the columns stretch to the height of the tallest one. -->
+                        <StackPanel Orientation="{Binding DataContext.PanelOrientation, RelativeSource={RelativeSource AncestorType=Window}}" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>
