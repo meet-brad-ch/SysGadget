@@ -66,6 +66,15 @@ namespace SysGadget.Core
             return settings;
         }
 
+        /// <summary>Makes an independent copy, so edits can be applied as a whole.</summary>
+        /// <returns>The copy.</returns>
+        public GadgetSettings Clone()
+        {
+            GadgetSettings copy = (GadgetSettings)MemberwiseClone();
+            copy.Meters = Meters.Select(m => new MeterSetting { Id = m.Id, Visible = m.Visible }).ToList();
+            return copy;
+        }
+
         /// <summary>Whether a meter is shown.</summary>
         /// <param name="id">The meter id.</param>
         /// <returns>True when shown.</returns>

@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="ActivityProviderTests.cs" />
     <Compile Include="CpuCounterProviderTests.cs" />
+    <Compile Include="CrashLogTests.cs" />
     <Compile Include="GpuTests.cs" />
     <Compile Include="MemoryProviderTests.cs" />
     <Compile Include="MeterSamplerTests.cs" />

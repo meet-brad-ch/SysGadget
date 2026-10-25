@@ -12,6 +12,7 @@
     <Compile Include="CategoryRateReader.cs" />
     <Compile Include="CoreLoad.cs" />
     <Compile Include="CpuCounterProvider.cs" />
+    <Compile Include="CrashLog.cs" />
     <Compile Include="DiskProvider.cs" />
     <Compile Include="DiskSample.cs" />
     <Compile Include="DockEdge.cs" />

@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultPageItems>false</EnableDefaultPageItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- WFO0003 asks WinForms apps to set DPI in code; this is a WPF app (WinForms only supplies NotifyIcon and Screen), and WPF reads per-monitor DPI from the manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <RootNamespace>SysGadget.App</RootNamespace>
+    <AssemblyName>SysGadget</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Page Include="GadgetWindow.xaml" />
+    <Page Include="SettingsWindow.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="App.xaml.cs" />
+    <Compile Include="AppBarDocker.cs" />
+    <Compile Include="Elevation.cs" />
+    <Compile Include="GadgetController.cs" />
+    <Compile Include="GadgetViewModel.cs" />
+    <Compile Include="GadgetWindow.xaml.cs" />
+    <Compile Include="MeterTitleConverter.cs" />
+    <Compile Include="ObservableObject.cs" />
+    <Compile Include="RowViewModel.cs" />
+    <Compile Include="SectionViewModel.cs" />
+    <Compile Include="SettingsWindow.xaml.cs" />
+    <Compile Include="TrayController.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SysGadget.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SysGadget.Core\SysGadget.Core.csproj" />
+    <ProjectReference Include="..\SysGadget.LibreHardware\SysGadget.LibreHardware.csproj" />
+  </ItemGroup>
+
+</Project>

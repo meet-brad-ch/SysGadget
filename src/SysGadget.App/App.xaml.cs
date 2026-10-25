@@ -1,0 +1,118 @@
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Threading;
+using SysGadget.Core;
+
+namespace SysGadget.App
+{
+    /// <summary>Application entry: single instance, settings, and the controller.</summary>
+    public partial class App : Application
+    {
+        private const string MutexName = "SysGadget.SingleInstance";
+        private const int MutexWaitMs = 3000;
+
+        private Mutex? instanceLock;
+        private GadgetController? controller;
+        private readonly CrashLog crashLog = new CrashLog(CrashLog.DefaultPath());
+        private bool reporting;
+
+        private void OnStartup(object sender, StartupEventArgs e)
+        {
+            DispatcherUnhandledException += OnUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnDomainException;
+            TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+            if (!AcquireInstanceLock())
+            {
+                Shutdown(0);
+                return;
+            }
+
+            GadgetSettings settings;
+            SettingsStore store = new SettingsStore(SettingsStore.DefaultPath());
+            try
+            {
+                settings = store.Load();
+            }
+            catch (InvalidDataException error)
+            {
+                MessageBox.Show(error.Message, "SysGadget", MessageBoxButton.OK, MessageBoxImage.Error);
+                Shutdown(1);
+                return;
+            }
+
+            controller = new GadgetController(store, settings);
+            controller.ExitRequested += () => Shutdown(0);
+            controller.Start();
+        }
+
+        private void OnExit(object sender, ExitEventArgs e)
+        {
+            controller?.Dispose();
+            instanceLock?.ReleaseMutex();
+            instanceLock?.Dispose();
+        }
+
+        private bool AcquireInstanceLock()
+        {
+            instanceLock = new Mutex(false, MutexName);
+            try
+            {
+                return instanceLock.WaitOne(MutexWaitMs); // a restarting copy waits for the old one to leave
+            }
+            catch (AbandonedMutexException)
+            {
+                return true; // the previous copy ended without releasing; the lock is ours now
+            }
+        }
+
+        private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            e.Handled = true;
+            if (reporting)
+            {
+                return; // the message box pumps messages; a repeat of the same fault must not open another one
+            }
+
+            reporting = true;
+            try
+            {
+                MessageBox.Show(Record("UI thread", e.Exception) + e.Exception, "SysGadget stopped", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                Shutdown(1);
+            }
+        }
+
+        private void OnDomainException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Record("any thread", (Exception)e.ExceptionObject); // the runtime ends the process right after this
+        }
+
+        private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+        {
+            Record("unobserved task", e.Exception);
+        }
+
+        /// <summary>Writes the crash log; a failure to write is reported in the returned text, not hidden.</summary>
+        private string Record(string source, Exception error)
+        {
+            try
+            {
+                crashLog.Write(source, error);
+                return "Written to " + CrashLog.DefaultPath() + "\n\n";
+            }
+            catch (IOException logError)
+            {
+                return "The crash log could not be written: " + logError.Message + "\n\n";
+            }
+            catch (UnauthorizedAccessException logError)
+            {
+                return "The crash log could not be written: " + logError.Message + "\n\n";
+            }
+        }
+    }
+}
