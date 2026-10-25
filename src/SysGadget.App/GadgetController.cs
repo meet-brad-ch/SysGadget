@@ -93,7 +93,7 @@ namespace SysGadget.App
         private static MeterRegistry CreateRegistry()
         {
             Func<ITemperatureSource>? temperatures = Elevation.IsAdministrator() ? Elevation.OpenTemperatureSource : null;
-            return new MeterRegistry(temperatures, NvmlTemperatureProvider.IsInstalled());
+            return new MeterRegistry(MachineSources.Real(temperatures, NvmlTemperatureProvider.IsInstalled()));
         }
 
         private MeterSampler CreateSampler()

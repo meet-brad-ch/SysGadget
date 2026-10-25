@@ -57,7 +57,7 @@ CI (`.github/workflows/build.yml`) builds, tests and makes the installer on ever
 ## Adding an item
 
 1. Add the item (and a source if it needs a new one) to `MeterCatalog` — data only.
-2. Add the source factory and the row function in `MeterRegistry`; its constructor fails while either is missing.
+2. Add the row function in `MeterRegistry`, and a new hardware source as a factory in `MachineSources` (the real provider in `Real`, a fixed snapshot in the tests' `FakeMachine`); the registry's constructor fails while either is missing.
 3. Add the formatting to `MeterRowBuilder`, with a test.
 
 ## Decisions

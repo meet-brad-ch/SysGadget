@@ -17,24 +17,19 @@ namespace SysGadget.Core
 
         private readonly Dictionary<string, Func<IReadOnlyList<string>>> instanceLists = new Dictionary<string, Func<IReadOnlyList<string>>>();
 
-        private readonly Func<ITemperatureSource>? temperatureFactory;
-        private readonly bool nvidiaInstalled;
+        private readonly MachineSources machine;
 
         /// <summary>Builds the registry.</summary>
-        /// <param name="temperatureFactory">
-        /// Opens the temperature source, or null when none is available (no admin rights).
-        /// </param>
-        /// <param name="nvidiaInstalled">Whether the NVIDIA driver with NVML is installed (GPU temperature).</param>
+        /// <param name="machine">The hardware sources: <see cref="MachineSources.Real"/>, or fixed ones in tests.</param>
         /// <exception cref="InvalidOperationException">A catalogue source or item has no behaviour.</exception>
-        public MeterRegistry(Func<ITemperatureSource>? temperatureFactory, bool nvidiaInstalled)
+        public MeterRegistry(MachineSources machine)
         {
-            this.temperatureFactory = temperatureFactory;
-            this.nvidiaInstalled = nvidiaInstalled;
+            this.machine = machine;
             AddSources();
             AddItems();
-            instanceLists[MeterCatalog.DiskRead] = DiskProvider.InstanceNames;
-            instanceLists[MeterCatalog.DiskWrite] = DiskProvider.InstanceNames;
-            instanceLists[MeterCatalog.DiskFree] = DiskProvider.InstanceNames;
+            instanceLists[MeterCatalog.DiskRead] = machine.DiskNames;
+            instanceLists[MeterCatalog.DiskWrite] = machine.DiskNames;
+            instanceLists[MeterCatalog.DiskFree] = machine.DiskNames;
             CheckCoverage();
         }
 
@@ -75,9 +70,9 @@ namespace SysGadget.Core
         {
             switch (sourceId)
             {
-                case MeterCatalog.Sources.Temperature when temperatureFactory == null:
+                case MeterCatalog.Sources.Temperature when machine.Temperatures == null:
                     return "Needs admin rights";
-                case MeterCatalog.Sources.GpuTemperature when !nvidiaInstalled:
+                case MeterCatalog.Sources.GpuTemperature when machine.GpuTemperature == null:
                     return "No NVIDIA driver";
                 default:
                     return null;
@@ -87,8 +82,15 @@ namespace SysGadget.Core
         /// <summary>Opens a source.</summary>
         /// <param name="sourceId">The source id; check <see cref="UnavailableReason"/> first.</param>
         /// <returns>The open source.</returns>
+        /// <exception cref="InvalidOperationException">The source is unavailable.</exception>
         public SampleSource Open(string sourceId)
         {
+            string? reason = UnavailableReason(sourceId);
+            if (reason != null)
+            {
+                throw new InvalidOperationException("Source '" + sourceId + "' is unavailable: " + reason);
+            }
+
             return sources[sourceId]();
         }
 
@@ -104,41 +106,13 @@ namespace SysGadget.Core
 
         private void AddSources()
         {
-            sources[MeterCatalog.Sources.Cpu] = () =>
-            {
-                CpuCounterProvider cpu = new CpuCounterProvider();
-                return new SampleSource(context => cpu.Read(), cpu);
-            };
-            sources[MeterCatalog.Sources.Memory] = () =>
-            {
-                MemoryProvider memory = new MemoryProvider();
-                return new SampleSource(context => memory.Read(), null);
-            };
-            sources[MeterCatalog.Sources.Gpu] = () =>
-            {
-                GpuCounterProvider gpu = new GpuCounterProvider();
-                return new SampleSource(context => gpu.Read(), null);
-            };
-            sources[MeterCatalog.Sources.GpuTemperature] = () =>
-            {
-                NvmlTemperatureProvider nvml = new NvmlTemperatureProvider();
-                return new SampleSource(context => nvml.Read(), nvml);
-            };
-            sources[MeterCatalog.Sources.Disk] = () =>
-            {
-                DiskProvider disk = new DiskProvider();
-                return new SampleSource(context => disk.Read(), null);
-            };
-            sources[MeterCatalog.Sources.Network] = () =>
-            {
-                NetworkProvider network = new NetworkProvider();
-                return new SampleSource(context => network.Read(), null);
-            };
-            sources[MeterCatalog.Sources.Temperature] = () =>
-            {
-                ITemperatureSource temperatures = temperatureFactory!();
-                return new SampleSource(context => temperatures.Read(), temperatures);
-            };
+            sources[MeterCatalog.Sources.Cpu] = machine.Cpu;
+            sources[MeterCatalog.Sources.Memory] = machine.Memory;
+            sources[MeterCatalog.Sources.Gpu] = machine.Gpu;
+            sources[MeterCatalog.Sources.GpuTemperature] = () => machine.GpuTemperature!(); // Open checks it is there
+            sources[MeterCatalog.Sources.Disk] = machine.Disk;
+            sources[MeterCatalog.Sources.Network] = machine.Network;
+            sources[MeterCatalog.Sources.Temperature] = () => machine.Temperatures!();
             sources[MeterCatalog.Sources.Clock] = () => new SampleSource(context => context, null);
         }
 

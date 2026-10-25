@@ -10,6 +10,7 @@ namespace SysGadget.Core.Tests
     public class MeterSamplerTests
     {
         private static readonly SampleContext Context = new SampleContext(new DateTime(2026, 10, 25, 9, 0, 0), TimeSpan.FromMinutes(5));
+        private static readonly string[] TwoDisks = { "0 C:", "1 D:" };
 
         private sealed class FakeTemperatures : ITemperatureSource
         {
@@ -26,11 +27,16 @@ namespace SysGadget.Core.Tests
             }
         }
 
-        /// <summary>Defaults plus this machine's disks, showing only the given items (a per-instance id shows all its instances).</summary>
+        private static MeterSampler FakeSampler(Func<ITemperatureSource>? temperatures = null)
+        {
+            return new MeterSampler(new MeterRegistry(FakeMachine.Sources(TwoDisks, temperatures)));
+        }
+
+        /// <summary>Defaults plus the fake machine's two disks, showing only the given items (a per-instance id shows all its instances).</summary>
         private static GadgetSettings OnlyItems(params string[] itemIds)
         {
             GadgetSettings settings = GadgetSettings.CreateDefault();
-            settings.AddInstances(new MeterRegistry(null, false).FindInstances());
+            settings.AddInstances(new MeterRegistry(FakeMachine.Sources(TwoDisks)).FindInstances());
             foreach (ItemSetting item in settings.Groups.SelectMany(g => g.Items))
             {
                 item.Visible = itemIds.Contains(item.Id);
@@ -39,24 +45,24 @@ namespace SysGadget.Core.Tests
             return settings;
         }
 
-        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
+        private static string[] AllItemIds()
+        {
+            return MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id).ToArray();
+        }
+
         [Fact]
         public void Sample_Defaults_GivesCpuMemoryGpu_InOrder_TotalAsTheFirstCpuRow()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            using (MeterSampler sampler = FakeSampler())
             {
-                GadgetSettings settings = GadgetSettings.CreateDefault();
-                sampler.Sample(settings, Context);
-                Thread.Sleep(1000);
-
-                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
+                IReadOnlyList<GroupSection> sections = sampler.Sample(GadgetSettings.CreateDefault(), Context);
 
                 Assert.Equal(new[] { MeterCatalog.CpuGroup, MeterCatalog.MemoryGroup, MeterCatalog.GpuGroup }, sections.Select(s => s.Id));
                 GroupSection cpu = sections[0];
                 Assert.Equal("CPU", cpu.Title);
                 Assert.Equal("Total", cpu.Rows[0].Label);
                 Assert.Equal("Core 0", cpu.Rows[1].Label);
-                Assert.Equal(Environment.ProcessorCount + 1, cpu.Rows.Count);
+                Assert.Equal(FakeMachine.Cores + 1, cpu.Rows.Count);
                 Assert.Equal("RAM", sections[1].Rows.Single().Label);
                 Assert.Equal(new[] { "Load", "VRAM", "Temp" }, sections[2].Rows.Select(r => r.Label));
             }
@@ -64,14 +70,39 @@ namespace SysGadget.Core.Tests
 
         [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
-        public void Sample_EveryItemVisible_EveryGroupHasRows()
+        public void Sample_RealMachine_EveryItemVisible_TwoSamples_EveryGroupHasRows()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            MeterRegistry registry = new MeterRegistry(MachineSources.Real(null, NvmlTemperatureProvider.IsInstalled()));
+            using (MeterSampler sampler = new MeterSampler(registry))
             {
-                GadgetSettings settings = OnlyItems(MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id).ToArray());
+                GadgetSettings settings = GadgetSettings.CreateDefault();
+                settings.AddInstances(registry.FindInstances());
+                foreach (ItemSetting item in settings.Groups.SelectMany(g => g.Items))
+                {
+                    item.Visible = true;
+                }
+
                 sampler.Sample(settings, Context);
                 Thread.Sleep(1000);
+                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
 
+                Assert.Equal(MeterCatalog.Groups.Count, sections.Count);
+                Assert.All(sections, s => Assert.True(s.Rows.Count > 0, s.Id));
+                Assert.Equal(Environment.ProcessorCount + 1, sections.Single(s => s.Id == MeterCatalog.CpuGroup).Rows.Count);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Sample_EveryItemVisible_ThinOrNot_EveryGroupHasRows(bool thin)
+        {
+            using (MeterSampler sampler = FakeSampler())
+            {
+                GadgetSettings settings = OnlyItems(AllItemIds());
+                settings.ThinBar = thin;
+
+                sampler.Sample(settings, Context);
                 IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
 
                 Assert.Equal(MeterCatalog.Groups.Count, sections.Count);
@@ -79,33 +110,14 @@ namespace SysGadget.Core.Tests
             }
         }
 
-        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void Sample_EveryItemVisible_ThinOrNot_TwoSamplesWork(bool thin)
-        {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
-            {
-                GadgetSettings settings = OnlyItems(MeterCatalog.Groups.SelectMany(g => g.Items).Select(i => i.Id).ToArray());
-                settings.ThinBar = thin;
-
-                sampler.Sample(settings, Context);
-                IReadOnlyList<GroupSection> sections = sampler.Sample(settings, Context);
-
-                Assert.Equal(MeterCatalog.Groups.Count, sections.Count);
-            }
-        }
-
-        [Trait("Category", "Hardware")] // needs this machine's hardware; CI filters it out
         [Fact]
         public void Sample_DiskEntries_DefaultReadWriteFreePerDisk_EachEntryShowsItsOwnRow_AndTheThinBarTheFirst()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, false)))
+            using (MeterSampler sampler = FakeSampler())
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.DiskRead, MeterCatalog.DiskWrite, MeterCatalog.DiskFree);
                 List<ItemSetting> entries = settings.Groups.Single(g => g.Id == MeterCatalog.StorageGroup).Items;
-                Assert.True(entries.Count >= 6, "this test needs a machine with two disks");
+                Assert.Equal(6, entries.Count);
                 string first = entries[0].Instance;
                 Assert.Equal(
                     new[] { MeterCatalog.DiskRead, MeterCatalog.DiskWrite, MeterCatalog.DiskFree },
@@ -131,7 +143,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_HiddenGroup_AndGroupWithoutVisibleItems_AreLeftOut()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            using (MeterSampler sampler = FakeSampler())
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Time, MeterCatalog.Ram);
                 settings.SetGroupVisible(MeterCatalog.MemoryGroup, false);
@@ -145,7 +157,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_CompactCores_MarksTheCoreRowsCompact()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            using (MeterSampler sampler = FakeSampler())
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.CpuCores);
                 settings.UseCompactCores = true;
@@ -159,7 +171,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_ThinBar_ShowsOneLineOfTheFirstVisibleItemOfEachGroup_InItsOrder()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            using (MeterSampler sampler = FakeSampler())
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.CpuTotal, MeterCatalog.CpuCores, MeterCatalog.Ram, MeterCatalog.Commit,
                     MeterCatalog.Time, MeterCatalog.Uptime, MeterCatalog.NetworkRates, MeterCatalog.DiskFree);
@@ -179,7 +191,7 @@ namespace SysGadget.Core.Tests
                 settings.PlaceItem(MeterCatalog.CpuCores, MeterCatalog.CpuTotal, false);
                 GroupSection cpu = sampler.Sample(settings, Context).Single(s => s.Id == MeterCatalog.CpuGroup);
 
-                Assert.Equal(Environment.ProcessorCount, cpu.Rows.Count);
+                Assert.Equal(FakeMachine.Cores, cpu.Rows.Count);
                 Assert.All(cpu.Rows, r => Assert.True(r.Compact));
             }
         }
@@ -187,7 +199,7 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void Sample_TemperaturesWithoutSource_ShowTheReasonRow()
         {
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(null, NvmlTemperatureProvider.IsInstalled())))
+            using (MeterSampler sampler = FakeSampler())
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
 
@@ -203,7 +215,7 @@ namespace SysGadget.Core.Tests
         {
             int created = 0;
             FakeTemperatures fake = new FakeTemperatures();
-            using (MeterSampler sampler = new MeterSampler(new MeterRegistry(() => { created++; return fake; }, NvmlTemperatureProvider.IsInstalled())))
+            using (MeterSampler sampler = FakeSampler(() => { created++; return fake; }))
             {
                 GadgetSettings settings = OnlyItems(MeterCatalog.Temperatures);
 

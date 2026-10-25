@@ -8,11 +8,13 @@ namespace SysGadget.Core.Tests
 {
     public class RegistryTests
     {
+        private static readonly string[] TwoDisks = { "0 C:", "1 D:" };
+
         [Fact]
         public void Constructor_CoversTheCatalogue_WithAndWithoutTemperatureFactory()
         {
-            MeterRegistry withoutTemperatures = new MeterRegistry(null, false);
-            MeterRegistry withTemperatures = new MeterRegistry(() => new FakeTemperatures(), true);
+            MeterRegistry withoutTemperatures = new MeterRegistry(FakeMachine.Sources(TwoDisks, null, false));
+            MeterRegistry withTemperatures = new MeterRegistry(FakeMachine.Sources(TwoDisks, () => new FakeTemperatures()));
 
             Assert.NotNull(withoutTemperatures);
             Assert.NotNull(withTemperatures);
@@ -21,33 +23,51 @@ namespace SysGadget.Core.Tests
         [Fact]
         public void UnavailableReason_OnlyForTemperatureWithoutAdmin_AndGpuTemperatureWithoutNvidia()
         {
-            Assert.Null(new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Cpu));
-            Assert.Equal("Needs admin rights", new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.Temperature));
-            Assert.Null(new MeterRegistry(() => new FakeTemperatures(), true).UnavailableReason(MeterCatalog.Sources.Temperature));
-            Assert.Null(new MeterRegistry(null, true).UnavailableReason(MeterCatalog.Sources.GpuTemperature));
-            Assert.Equal("No NVIDIA driver", new MeterRegistry(null, false).UnavailableReason(MeterCatalog.Sources.GpuTemperature));
+            Assert.Null(new MeterRegistry(FakeMachine.Sources(TwoDisks)).UnavailableReason(MeterCatalog.Sources.Cpu));
+            Assert.Equal("Needs admin rights", new MeterRegistry(FakeMachine.Sources(TwoDisks)).UnavailableReason(MeterCatalog.Sources.Temperature));
+            Assert.Null(new MeterRegistry(FakeMachine.Sources(TwoDisks, () => new FakeTemperatures())).UnavailableReason(MeterCatalog.Sources.Temperature));
+            Assert.Null(new MeterRegistry(FakeMachine.Sources(TwoDisks)).UnavailableReason(MeterCatalog.Sources.GpuTemperature));
+            Assert.Equal("No NVIDIA driver", new MeterRegistry(FakeMachine.Sources(TwoDisks, null, false)).UnavailableReason(MeterCatalog.Sources.GpuTemperature));
         }
 
         [Fact]
-        public void FindInstances_ListsReadWriteFreePerDisk_DiskByDisk_AsSpelledByTheSampler()
+        public void Open_UnavailableSource_Throws()
         {
-            IReadOnlyList<InstanceRef> found = new MeterRegistry(null, false).FindInstances();
-            List<string> disks = new DiskProvider().Read().Select(d => d.Name).OrderBy(n => n, System.StringComparer.Ordinal).ToList();
+            MeterRegistry registry = new MeterRegistry(FakeMachine.Sources(TwoDisks, null, false));
 
-            Assert.Equal(disks.Count * 3, found.Count);
-            for (int i = 0; i < disks.Count; i++)
+            Assert.Throws<InvalidOperationException>(() => registry.Open(MeterCatalog.Sources.Temperature));
+            Assert.Throws<InvalidOperationException>(() => registry.Open(MeterCatalog.Sources.GpuTemperature));
+        }
+
+        [Fact]
+        public void FindInstances_ListsReadWriteFreePerDisk_DiskByDisk()
+        {
+            IReadOnlyList<InstanceRef> found = new MeterRegistry(FakeMachine.Sources(TwoDisks)).FindInstances();
+
+            Assert.Equal(TwoDisks.Length * 3, found.Count);
+            for (int i = 0; i < TwoDisks.Length; i++)
             {
                 Assert.Equal(
                     new[] { MeterCatalog.DiskRead, MeterCatalog.DiskWrite, MeterCatalog.DiskFree },
                     found.Skip(i * 3).Take(3).Select(f => f.ItemId));
-                Assert.All(found.Skip(i * 3).Take(3), f => Assert.Equal(disks[i], f.Instance));
+                Assert.All(found.Skip(i * 3).Take(3), f => Assert.Equal(TwoDisks[i], f.Instance));
             }
+        }
+
+        [Fact]
+        public void Real_DiskNames_AreSpelledAsTheDiskSamples()
+        {
+            List<string> listed = MachineSources.Real(null, false).DiskNames().OrderBy(n => n, StringComparer.Ordinal).ToList();
+            List<string> sampled = new DiskProvider().Read().Select(d => d.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
+
+            Assert.NotEmpty(listed);
+            Assert.Equal(sampled, listed);
         }
 
         [Fact]
         public void Rows_ClockItems_ReadTheInjectedContext()
         {
-            MeterRegistry registry = new MeterRegistry(null, true);
+            MeterRegistry registry = new MeterRegistry(FakeMachine.Sources(TwoDisks));
             SampleContext context = new SampleContext(new DateTime(2026, 10, 25, 9, 30, 0), TimeSpan.FromHours(2));
             object snapshot;
             using (SampleSource clock = registry.Open(MeterCatalog.Sources.Clock))
