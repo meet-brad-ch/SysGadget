@@ -11,7 +11,8 @@ namespace SysGadget.App
     /// <summary>Application entry: single instance, settings, and the controller.</summary>
     public partial class App : Application
     {
-        private const string MutexName = "SysGadget.SingleInstance";
+        // the installer's AppMutex names the same mutex, so setup asks to close a running gadget
+        private const string MutexName = @"Local\SysGadget.SingleInstance";
         private const int MutexWaitMs = 3000;
 
         private Mutex? instanceLock;

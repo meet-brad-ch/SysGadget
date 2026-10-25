@@ -16,6 +16,7 @@ namespace SysGadget.App
 
         private readonly GadgetSettings working;
         private readonly Action<GadgetSettings> apply;
+        private readonly Action<bool> applyAutostart;
         private List<SettingsTreeNode> tree = new List<SettingsTreeNode>();
         private SettingsTreeNode? pressed;
         private SettingsTreeNode? marked;
@@ -25,10 +26,19 @@ namespace SysGadget.App
         /// <param name="current">The settings now in force; they are copied, not edited.</param>
         /// <param name="monitorNames">Display names of the monitors, in Windows order.</param>
         /// <param name="apply">Called with a copy of the edited settings.</param>
-        public SettingsWindow(GadgetSettings current, string[] monitorNames, Action<GadgetSettings> apply)
+        /// <param name="startsWithWindows">Whether the start-with-Windows entry exists now.</param>
+        /// <param name="applyAutostart">Called with the start-with-Windows choice on OK or Apply.</param>
+        public SettingsWindow(
+            GadgetSettings current,
+            string[] monitorNames,
+            Action<GadgetSettings> apply,
+            bool startsWithWindows,
+            Action<bool> applyAutostart)
         {
             InitializeComponent();
             this.apply = apply;
+            this.applyAutostart = applyAutostart;
+            AutostartBox.IsChecked = startsWithWindows;
             working = current.Clone();
             EdgeBox.ItemsSource = Enum.GetValues(typeof(DockEdge));
             MonitorBox.ItemsSource = monitorNames;
@@ -233,6 +243,18 @@ namespace SysGadget.App
             }
 
             apply(working.Clone());
+            try
+            {
+                applyAutostart(AutostartBox.IsChecked == true);
+            }
+            catch (Exception error) when (error is UnauthorizedAccessException || error is System.Security.SecurityException || error is System.IO.IOException)
+            {
+                // the registry refused the Run entry: the user is told, nothing claims success
+                MessageBox.Show(this, "Start with Windows could not be changed: " + error.Message, "SysGadget settings",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
             return true;
         }
 

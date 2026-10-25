@@ -26,6 +26,7 @@ namespace SysGadget.App
         private readonly AppBarDocker docker;
         private GadgetSettings settings;
         private readonly MeterRegistry registry = CreateRegistry();
+        private readonly AutostartRegistration autostart = new AutostartRegistration(Environment.ProcessPath!);
         private readonly Replaceable<MeterSampler> samplers;
         private SettingsWindow? settingsWindow;
         private bool sampling;
@@ -352,7 +353,7 @@ namespace SysGadget.App
             string[] monitors = Screen.AllScreens
                 .Select((s, i) => (i + 1) + ": " + s.Bounds.Width + "x" + s.Bounds.Height + (s.Primary ? " (primary)" : string.Empty))
                 .ToArray();
-            settingsWindow = new SettingsWindow(settings, monitors, ApplyFromSettingsWindow);
+            settingsWindow = new SettingsWindow(settings, monitors, ApplyFromSettingsWindow, autostart.IsEnabled, autostart.Set);
             settingsWindow.Closed += (sender, args) => settingsWindow = null;
             settingsWindow.Show();
         }

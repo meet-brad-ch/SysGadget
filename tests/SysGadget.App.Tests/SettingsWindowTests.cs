@@ -14,9 +14,14 @@ namespace SysGadget.App.Tests
     /// <summary>Drives the real settings window, opened non-modal as the gadget opens it, off-screen.</summary>
     public class SettingsWindowTests
     {
-        private static SettingsWindow Open(GadgetSettings settings, List<GadgetSettings> applied)
+        private static SettingsWindow Open(
+            GadgetSettings settings,
+            List<GadgetSettings> applied,
+            List<bool>? autostart = null,
+            bool startsWithWindows = false)
         {
-            SettingsWindow window = new SettingsWindow(settings, new[] { "1: test" }, applied.Add)
+            List<bool> autostartCalls = autostart ?? new List<bool>();
+            SettingsWindow window = new SettingsWindow(settings, new[] { "1: test" }, applied.Add, startsWithWindows, autostartCalls.Add)
             {
                 WindowStartupLocation = WindowStartupLocation.Manual,
                 Left = -20000,
@@ -155,6 +160,25 @@ namespace SysGadget.App.Tests
 
                 Assert.True(applied.Single().ShowsTemperatures());
                 Assert.DoesNotContain(Descendants<CheckBox>(window), c => (c.Content as string ?? string.Empty).Contains("LibreHardwareMonitor"));
+            });
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void StartWithWindows_ShowsTheCurrentState_AndOkPassesTheChoice(bool startsWithWindows)
+        {
+            StaRunner.Run(() =>
+            {
+                List<bool> autostart = new List<bool>();
+                SettingsWindow window = Open(GadgetSettings.CreateDefault(), new List<GadgetSettings>(), autostart, startsWithWindows);
+
+                Assert.Equal(startsWithWindows, window.AutostartBox.IsChecked);
+
+                ((IToggleProvider)new CheckBoxAutomationPeer(window.AutostartBox).GetPattern(PatternInterface.Toggle)!).Toggle();
+                Click(Descendants<Button>(window).Single(b => (string)b.Content == "OK"));
+
+                Assert.Equal(new[] { !startsWithWindows }, autostart);
             });
         }
 

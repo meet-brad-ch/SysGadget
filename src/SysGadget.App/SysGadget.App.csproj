@@ -8,6 +8,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>disable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- drawn by tools/make_icon.ps1; also embedded for the tray icon -->
+    <ApplicationIcon>SysGadget.ico</ApplicationIcon>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -20,11 +22,13 @@
   <ItemGroup>
     <Page Include="GadgetWindow.xaml" />
     <Page Include="SettingsWindow.xaml" />
+    <EmbeddedResource Include="SysGadget.ico" LogicalName="SysGadget.App.SysGadget.ico" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="App.xaml.cs" />
     <Compile Include="AppBarDocker.cs" />
+    <Compile Include="AutostartRegistration.cs" />
     <Compile Include="DropMark.cs" />
     <Compile Include="DropPlace.cs" />
     <Compile Include="Elevation.cs" />

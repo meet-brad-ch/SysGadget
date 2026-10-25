@@ -73,6 +73,7 @@
                        HorizontalAlignment="Right" />
         </Grid>
 
+        <CheckBox Margin="0,4,0,0" x:Name="AutostartBox" Content="Start SysGadget with Windows" />
         <CheckBox Margin="0,4,0,0" IsChecked="{Binding AlwaysOnTop}" Content="Always on top" />
         <CheckBox Margin="0,4,0,0" IsChecked="{Binding ThinBar}"
                   Content="Thin bar: one line per group (double-click the gadget to switch)" />

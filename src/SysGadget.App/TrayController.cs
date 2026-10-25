@@ -10,12 +10,12 @@ namespace SysGadget.App
         private readonly NotifyIcon icon;
         private readonly ToolStripMenuItem topmostItem;
         private readonly ToolStripMenuItem thinItem;
-        private readonly Icon drawnIcon;
+        private readonly Icon appIcon;
 
         /// <summary>Creates the icon.</summary>
         public TrayController()
         {
-            drawnIcon = DrawIcon();
+            appIcon = LoadAppIcon();
             topmostItem = new ToolStripMenuItem("Always on top") { CheckOnClick = true };
             topmostItem.Click += (sender, args) => TopmostToggled?.Invoke(topmostItem.Checked);
             thinItem = new ToolStripMenuItem("Thin bar") { CheckOnClick = true };
@@ -28,7 +28,7 @@ namespace SysGadget.App
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Exit", null, (sender, args) => ExitRequested?.Invoke());
 
-            icon = new NotifyIcon { Icon = drawnIcon, Text = "SysGadget", ContextMenuStrip = menu, Visible = true };
+            icon = new NotifyIcon { Icon = appIcon, Text = "SysGadget", ContextMenuStrip = menu, Visible = true };
             icon.DoubleClick += (sender, args) => SettingsRequested?.Invoke();
         }
 
@@ -63,41 +63,21 @@ namespace SysGadget.App
         {
             icon.Visible = false;
             icon.Dispose();
-            drawnIcon.Dispose();
+            appIcon.Dispose();
         }
 
-        private static Icon DrawIcon()
+        /// <summary>The app icon (tools/make_icon.ps1) at the size Windows uses in the notification area.</summary>
+        private static Icon LoadAppIcon()
         {
-            using (Bitmap bitmap = new Bitmap(32, 32))
-            using (Graphics graphics = Graphics.FromImage(bitmap))
+            using (System.IO.Stream? stream = typeof(TrayController).Assembly.GetManifestResourceStream("SysGadget.App.SysGadget.ico"))
             {
-                graphics.Clear(Color.Transparent);
-                int[] heights = { 14, 26, 20 };
-                for (int i = 0; i < heights.Length; i++)
+                if (stream == null)
                 {
-                    using (Brush brush = new SolidBrush(Color.FromArgb(77, 163, 255)))
-                    {
-                        graphics.FillRectangle(brush, 3 + i * 10, 30 - heights[i], 8, heights[i]);
-                    }
+                    throw new InvalidOperationException("The embedded resource SysGadget.App.SysGadget.ico is missing.");
                 }
 
-                IntPtr handle = bitmap.GetHicon();
-                try
-                {
-                    using (Icon temporary = Icon.FromHandle(handle))
-                    {
-                        return (Icon)temporary.Clone(); // the clone owns its own copy of the image
-                    }
-                }
-                finally
-                {
-                    DestroyIcon(handle);
-                }
+                return new Icon(stream, SystemInformation.SmallIconSize);
             }
         }
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        private static extern bool DestroyIcon(IntPtr handle);
     }
 }

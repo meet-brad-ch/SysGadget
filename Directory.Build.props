@@ -1,0 +1,9 @@
+<Project>
+  <!-- One version for every project; the installer build script and the release script read it too. -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Authors>Brad Chamberlain</Authors>
+    <Product>SysGadget</Product>
+    <Copyright>Brad Chamberlain</Copyright>
+  </PropertyGroup>
+</Project>
