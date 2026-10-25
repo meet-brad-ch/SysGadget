@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using SysGadget.Core;
 using Xunit;
 
@@ -15,6 +16,15 @@ namespace SysGadget.Core.Tests
                 .ToList();
 
             Assert.Equal(ids.Count, ids.Distinct().Count());
+        }
+
+        [Fact]
+        public void Accents_AreHexColours_AndDifferPerGroup()
+        {
+            Regex colour = new Regex("^#[0-9A-F]{6}$");
+
+            Assert.All(MeterCatalog.Groups, g => Assert.Matches(colour, g.Accent));
+            Assert.Equal(MeterCatalog.Groups.Count, MeterCatalog.Groups.Select(g => g.Accent).Distinct().Count());
         }
 
         [Fact]

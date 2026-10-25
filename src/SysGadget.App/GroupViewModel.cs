@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Media;
 using SysGadget.Core;
 
 namespace SysGadget.App
@@ -8,6 +10,10 @@ namespace SysGadget.App
     /// <summary>The view of one <see cref="GroupSection"/>: a card with a title header, rows and an optional core strip.</summary>
     internal sealed class GroupViewModel : ObservableObject
     {
+        private const double CardTint = 0.14;
+        private const double BorderTint = 0.45;
+        private static readonly Color CardBase = Color.FromRgb(0x1C, 0x1F, 0x27);
+
         private bool isCollapsed;
 
         /// <summary>Creates the view of a group.</summary>
@@ -17,7 +23,20 @@ namespace SysGadget.App
         {
             Id = id;
             Title = title;
+            Color accent = (Color)ColorConverter.ConvertFromString(MeterCatalog.GetGroup(id).Accent);
+            AccentBrush = Frozen(accent);
+            CardBrush = Frozen(Mix(CardBase, accent, CardTint));
+            CardBorderBrush = Frozen(Mix(CardBase, accent, BorderTint));
         }
+
+        /// <summary>The group colour: title text.</summary>
+        public Brush AccentBrush { get; }
+
+        /// <summary>Card background: the neutral card colour tinted towards the group colour.</summary>
+        public Brush CardBrush { get; }
+
+        /// <summary>Card border: a stronger tint of the group colour.</summary>
+        public Brush CardBorderBrush { get; }
 
         /// <summary>Group id.</summary>
         public string Id { get; }
@@ -80,6 +99,21 @@ namespace SysGadget.App
             {
                 target[i].Update(rows[i]);
             }
+        }
+
+        private static Color Mix(Color from, Color to, double amount)
+        {
+            return Color.FromRgb(
+                (byte)Math.Round(from.R + ((to.R - from.R) * amount)),
+                (byte)Math.Round(from.G + ((to.G - from.G) * amount)),
+                (byte)Math.Round(from.B + ((to.B - from.B) * amount)));
+        }
+
+        private static Brush Frozen(Color color)
+        {
+            SolidColorBrush brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
         }
 
         private void RaiseBody()

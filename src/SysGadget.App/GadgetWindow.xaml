@@ -13,10 +13,7 @@
         MouseLeftButtonDown="OnMouseLeftButtonDown">
     <Window.Resources>
         <SolidColorBrush x:Key="PanelBrush" Color="#F00E1014" />
-        <SolidColorBrush x:Key="CardBrush" Color="#FF1C1F27" />
-        <SolidColorBrush x:Key="CardBorderBrush" Color="#FF2A2E39" />
         <SolidColorBrush x:Key="DividerBrush" Color="#FF303544" />
-        <SolidColorBrush x:Key="TitleBrush" Color="#FF7FB2FF" />
         <SolidColorBrush x:Key="TextBrush" Color="#E6E8EE" />
         <SolidColorBrush x:Key="DimBrush" Color="#9AA0AE" />
         <SolidColorBrush x:Key="TrackBrush" Color="#2D313B" />
@@ -63,7 +60,7 @@
         <!-- A strip cell: the same bar turned upright, filling from the bottom. -->
         <Style x:Key="StripCellStyle" TargetType="ProgressBar" BasedOn="{StaticResource BarStyle}">
             <Setter Property="Height" Value="Auto" />
-            <Setter Property="Width" Value="28" />
+            <Setter Property="Width" Value="56" />
             <Setter Property="MinWidth" Value="0" />
             <Setter Property="Margin" Value="1,0" />
             <Setter Property="VerticalAlignment" Value="Stretch" />
@@ -123,7 +120,7 @@
         <DataTemplate x:Key="GroupTemplate">
             <Border Width="{Binding DataContext.SectionWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                     Margin="0,0,8,8" Padding="9,6,9,6" CornerRadius="6"
-                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource CardBorderBrush}"
+                    Background="{Binding CardBrush}" BorderBrush="{Binding CardBorderBrush}"
                     BorderThickness="1">
                 <StackPanel>
                     <Grid Background="Transparent" Cursor="Hand" MouseLeftButtonDown="OnGroupHeaderMouseDown"
@@ -132,7 +129,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="14" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource TitleBrush}" FontSize="11.5"
+                        <TextBlock Text="{Binding Title}" Foreground="{Binding AccentBrush}" FontSize="11.5"
                                    FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
                                    Foreground="{StaticResource DimBrush}" FontSize="10"
@@ -154,7 +151,7 @@
                     <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource RowTemplate}"
                                   Grid.IsSharedSizeScope="True"
                                   Visibility="{Binding ShowRows, Converter={StaticResource Visible}}" />
-                    <ItemsControl ItemsSource="{Binding CompactRows}" Height="30" Margin="0,0,0,4"
+                    <ItemsControl ItemsSource="{Binding CompactRows}" Height="58" Margin="0,2,0,4"
                                   Visibility="{Binding ShowStrip, Converter={StaticResource Visible}}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

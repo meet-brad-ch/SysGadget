@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Media;
 using SysGadget.Core;
 using Xunit;
 
@@ -35,6 +36,23 @@ namespace SysGadget.App.Tests
             group.Update(new GroupSection(MeterCatalog.CpuGroup, "CPU", false, new MeterRow[0]));
 
             Assert.False(group.CanCollapse);
+        }
+
+        [Fact]
+        public void GroupViewModel_Brushes_FollowTheCatalogueAccent()
+        {
+            GroupViewModel cpu = new GroupViewModel(MeterCatalog.CpuGroup, "CPU");
+            GroupViewModel gpu = new GroupViewModel(MeterCatalog.GpuGroup, "GPU");
+
+            Color accent = ((SolidColorBrush)cpu.AccentBrush).Color;
+            Color card = ((SolidColorBrush)cpu.CardBrush).Color;
+            Color border = ((SolidColorBrush)cpu.CardBorderBrush).Color;
+
+            Assert.Equal((Color)ColorConverter.ConvertFromString(MeterCatalog.GetGroup(MeterCatalog.CpuGroup).Accent), accent);
+            Assert.InRange(card.B, 0x27, border.B); // neutral card < tinted card < border, towards the blue accent
+            Assert.InRange(border.B, card.B, accent.B);
+            Assert.NotEqual(((SolidColorBrush)gpu.CardBrush).Color, card);
+            Assert.True(cpu.CardBrush.IsFrozen);
         }
 
         [Fact]
