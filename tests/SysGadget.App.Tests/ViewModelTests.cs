@@ -70,6 +70,30 @@ namespace SysGadget.App.Tests
         }
 
         [Fact]
+        public void TextLabelMaxWidth_GivesRowsWithoutABarMoreRoom()
+        {
+            GadgetViewModel view = new GadgetViewModel { SectionWidth = 224 };
+
+            Assert.Equal(119.0, view.TextLabelMaxWidth, 6);
+            Assert.True(view.TextLabelMaxWidth > view.LabelMaxWidth);
+        }
+
+        [Fact]
+        public void RowViewModel_Level_TakesTheBuildersAlert_OverTheBarFill()
+        {
+            RowViewModel row = new RowViewModel();
+
+            row.Update(new MeterRow("990 PRO Composite", "72 °C (max 73)", 0.0, false, false, string.Empty, AlertLevel.Warning));
+            Assert.Equal(1, row.Level);
+
+            row.Update(new MeterRow("Total", "95 %", 95.0, true));
+            Assert.Equal(2, row.Level);
+
+            row.Update(new MeterRow("Time", "Sun 10:00:00", 0.0, false));
+            Assert.Equal(0, row.Level);
+        }
+
+        [Fact]
         public void RainbowPalette_RunsFromRedToViolet_EvenlyOverTheCards()
         {
             Color first = RainbowPalette.Accent(0, 7);

@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AlertLevel.cs" />
     <Compile Include="ByteFormat.cs" />
     <Compile Include="CategoryRateReader.cs" />
     <Compile Include="CoreLoad.cs" />

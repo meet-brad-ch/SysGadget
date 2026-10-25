@@ -104,19 +104,37 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void Temperatures_NameTheDevice_DropAlarmLimits_ClampTheBar_AndShowDegrees()
+        public void Temperatures_NameTheDevice_ShowThePeak_NoBar_AndUseTheDriveLimitsInsteadOfShowingThem()
         {
             IReadOnlyList<MeterRow> rows = MeterRowBuilder.Temperatures(new[]
             {
-                new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU Hot Spot", 60.0),
-                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Composite", 123.4),
+                new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU Hot Spot", 60.0, 66.0),
+                new TemperatureReading("Samsung SSD 990 PRO 2TB", "Composite", 72.4, 73.0),
                 new TemperatureReading("Samsung SSD 990 PRO 2TB", "Warning Temperature", 81.0),
                 new TemperatureReading("Samsung SSD 990 PRO 2TB", "Critical Temperature", 84.0),
             });
 
             Assert.Equal(new[] { "RTX 4090 Hot Spot", "990 PRO Composite" }, rows.Select(r => r.Label));
-            Assert.Equal("123 °C", rows[1].ValueText);
-            Assert.Equal(100.0, rows[1].Percent, 6);
+            Assert.Equal("60 °C (max 66)", rows[0].ValueText);
+            Assert.All(rows, r => Assert.False(r.HasBar));
+            Assert.Equal(AlertLevel.Normal, rows[0].Alert); // no limits: below the fixed 75 °C
+            Assert.Equal(AlertLevel.Warning, rows[1].Alert); // 72 °C is within 10 °C of the drive's 81 °C warning limit
+        }
+
+        [Theory]
+        [InlineData(70.0, null, null, AlertLevel.Normal)]
+        [InlineData(75.0, null, null, AlertLevel.Warning)]
+        [InlineData(90.0, null, null, AlertLevel.Critical)]
+        [InlineData(70.9, 81.0, 84.0, AlertLevel.Normal)]
+        [InlineData(71.0, 81.0, 84.0, AlertLevel.Warning)]
+        [InlineData(83.9, 81.0, 84.0, AlertLevel.Warning)]
+        [InlineData(84.0, 81.0, 84.0, AlertLevel.Critical)]
+        [InlineData(85.0, 88.0, null, AlertLevel.Warning)]
+        [InlineData(88.0, 88.0, null, AlertLevel.Critical)]
+        [InlineData(86.0, null, 96.0, AlertLevel.Warning)]
+        public void TemperatureAlert_UsesTheDeviceLimits_ElseFixedThresholds(double celsius, double? warning, double? critical, AlertLevel expected)
+        {
+            Assert.Equal(expected, MeterRowBuilder.TemperatureAlert(celsius, warning, critical));
         }
 
         [Fact]
@@ -148,20 +166,21 @@ namespace SysGadget.Core.Tests
         }
 
         [Fact]
-        public void GpuTemperature_LabelsTempForOneGpu_ShortNamesForMore_AndClampsTheBar()
+        public void GpuTemperature_LabelsTempForOneGpu_ShortNamesForMore_ShowsThePeak_AndUsesTheGpuLimits()
         {
-            TemperatureReading rtx = new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU", 54.0);
-            TemperatureReading hot = new TemperatureReading("NVIDIA GeForce RTX 3060", "GPU", 104.0);
+            TemperatureReading rtx = new TemperatureReading("NVIDIA GeForce RTX 4090", "GPU", 54.0, 61.0, 88.0, 96.0);
+            TemperatureReading hot = new TemperatureReading("NVIDIA GeForce RTX 3060", "GPU", 96.0, 97.0, 88.0, 96.0);
 
             MeterRow single = MeterRowBuilder.GpuTemperature(new[] { rtx })[0];
             IReadOnlyList<MeterRow> two = MeterRowBuilder.GpuTemperature(new[] { rtx, hot });
 
             Assert.Equal("Temp", single.Label);
-            Assert.Equal("54 °C", single.ValueText);
-            Assert.True(single.HasBar);
+            Assert.Equal("54 °C (max 61)", single.ValueText);
+            Assert.False(single.HasBar);
+            Assert.Equal(AlertLevel.Normal, single.Alert);
             Assert.Equal("RTX 4090", two[0].Label);
             Assert.Equal("RTX 3060", two[1].Label);
-            Assert.Equal(100.0, two[1].Percent, 6);
+            Assert.Equal(AlertLevel.Critical, two[1].Alert);
         }
 
         [Theory]

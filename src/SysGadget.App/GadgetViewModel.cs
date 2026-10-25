@@ -15,6 +15,9 @@ namespace SysGadget.App
         private const double RowReserveWidth = 140.0;
         private const double MinLabelWidth = 64.0;
 
+        // card padding and border (20) + gap and room for a value like "63 °C (max 71)" (85)
+        private const double TextRowReserveWidth = 105.0;
+
         private double sectionWidth = 224.0;
         private Orientation panelOrientation = Orientation.Vertical;
         private bool thin;
@@ -58,6 +61,7 @@ namespace SysGadget.App
             {
                 Set(ref sectionWidth, value);
                 Raise(nameof(LabelMaxWidth));
+                Raise(nameof(TextLabelMaxWidth));
             }
         }
 
@@ -66,6 +70,12 @@ namespace SysGadget.App
         /// so wider cards show longer labels (sensor names) before they are cut with "...".
         /// </summary>
         public double LabelMaxWidth => Math.Max(MinLabelWidth, sectionWidth - RowReserveWidth);
+
+        /// <summary>
+        /// Widest a label may get in a row without a bar (temperatures, times): only the value needs
+        /// room, so long sensor names fit.
+        /// </summary>
+        public double TextLabelMaxWidth => Math.Max(MinLabelWidth, sectionWidth - TextRowReserveWidth);
 
         /// <summary>
         /// Shows a new sample. The cards are rebuilt only when the set or order of groups changes,

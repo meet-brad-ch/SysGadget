@@ -101,6 +101,12 @@
                 <DataTrigger Binding="{Binding HasBar}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="1">
+                    <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Level}" Value="2">
+                    <Setter Property="Foreground" Value="{StaticResource CriticalBrush}" />
+                </DataTrigger>
             </Style.Triggers>
         </Style>
 
@@ -125,9 +131,21 @@
                     <ColumnDefinition Width="Auto" SharedSizeGroup="Value" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding Label}" Foreground="{StaticResource DimBrush}" FontSize="11"
-                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
-                           MaxWidth="{Binding DataContext.LabelMaxWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                           ToolTip="{Binding Label}" />
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Label}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <!-- a row without a bar leaves its label all the room the value does not need -->
+                            <Setter Property="MaxWidth"
+                                    Value="{Binding DataContext.TextLabelMaxWidth, RelativeSource={RelativeSource AncestorType=Window}}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasBar}" Value="True">
+                                    <Setter Property="MaxWidth"
+                                            Value="{Binding DataContext.LabelMaxWidth, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <ProgressBar Grid.Column="1" Value="{Binding Percent, Mode=OneWay}" Style="{StaticResource BarStyle}"
                              Margin="7,0" />
                 <TextBlock Grid.Column="2" Text="{Binding ValueText}" Style="{StaticResource BarValueStyle}" />

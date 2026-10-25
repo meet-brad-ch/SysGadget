@@ -34,6 +34,35 @@ namespace SysGadget.Core
         [DllImport(Library, EntryPoint = "nvmlDeviceGetTemperature")]
         private static extern int GetTemperature(IntPtr device, int sensor, out uint celsius);
 
+        [DllImport(Library, EntryPoint = "nvmlDeviceGetTemperatureThreshold")]
+        private static extern int GetThreshold(IntPtr device, int threshold, out uint celsius);
+
+        private const int ShutdownThreshold = 0; // NVML_TEMPERATURE_THRESHOLD_SHUTDOWN
+        private const int SlowdownThreshold = 1; // NVML_TEMPERATURE_THRESHOLD_SLOWDOWN
+        private const int NotSupported = 3; // NVML_ERROR_NOT_SUPPORTED
+
+        /// <summary>One GPU: its handle, name, limits and the highest temperature read so far.</summary>
+        private sealed class Gpu
+        {
+            public Gpu(IntPtr handle, string name, double? slowdown, double? shutdown)
+            {
+                Handle = handle;
+                Name = name;
+                Slowdown = slowdown;
+                Shutdown = shutdown;
+            }
+
+            public IntPtr Handle { get; }
+
+            public string Name { get; }
+
+            public double? Slowdown { get; }
+
+            public double? Shutdown { get; }
+
+            public double Max { get; set; } = double.MinValue;
+        }
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr LoadLibrary(string name);
 
@@ -41,8 +70,7 @@ namespace SysGadget.Core
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool FreeLibrary(IntPtr module);
 
-        private readonly List<IntPtr> devices = new List<IntPtr>();
-        private readonly List<string> names = new List<string>();
+        private readonly List<Gpu> gpus = new List<Gpu>();
         private bool open;
 
         /// <summary>Starts NVML and lists the NVIDIA GPUs.</summary>
@@ -57,9 +85,21 @@ namespace SysGadget.Core
                 Check(GetHandle(index, out IntPtr device), "nvmlDeviceGetHandleByIndex_v2");
                 StringBuilder name = new StringBuilder(NameLength);
                 Check(GetName(device, name, NameLength), "nvmlDeviceGetName");
-                devices.Add(device);
-                names.Add(name.ToString());
+                gpus.Add(new Gpu(device, name.ToString(), Threshold(device, SlowdownThreshold), Threshold(device, ShutdownThreshold)));
             }
+        }
+
+        /// <summary>A temperature limit of the GPU; null when this GPU does not report it.</summary>
+        private static double? Threshold(IntPtr device, int threshold)
+        {
+            int result = GetThreshold(device, threshold, out uint celsius);
+            if (result == NotSupported)
+            {
+                return null; // the GPU has no such limit; the row falls back to fixed thresholds
+            }
+
+            Check(result, "nvmlDeviceGetTemperatureThreshold");
+            return celsius;
         }
 
         /// <summary>Whether nvml.dll can be loaded, that is, whether an NVIDIA driver is installed.</summary>
@@ -77,15 +117,19 @@ namespace SysGadget.Core
         }
 
         /// <summary>Reads the core temperature of every NVIDIA GPU.</summary>
-        /// <returns>One reading per GPU; the hardware name is the GPU name, the sensor name "GPU".</returns>
+        /// <returns>
+        /// One reading per GPU: the hardware name is the GPU name, the sensor name "GPU"; with the peak
+        /// since this provider opened and the slow-down (warning) and shut-down (critical) limits.
+        /// </returns>
         /// <exception cref="InvalidOperationException">An NVML call failed.</exception>
         public IReadOnlyList<TemperatureReading> Read()
         {
-            List<TemperatureReading> readings = new List<TemperatureReading>(devices.Count);
-            for (int i = 0; i < devices.Count; i++)
+            List<TemperatureReading> readings = new List<TemperatureReading>(gpus.Count);
+            foreach (Gpu gpu in gpus)
             {
-                Check(GetTemperature(devices[i], GpuSensor, out uint celsius), "nvmlDeviceGetTemperature");
-                readings.Add(new TemperatureReading(names[i], "GPU", celsius));
+                Check(GetTemperature(gpu.Handle, GpuSensor, out uint celsius), "nvmlDeviceGetTemperature");
+                gpu.Max = Math.Max(gpu.Max, celsius);
+                readings.Add(new TemperatureReading(gpu.Name, "GPU", celsius, gpu.Max, gpu.Slowdown, gpu.Shutdown));
             }
 
             return readings;

@@ -17,7 +17,11 @@ namespace SysGadget.Core
             "Western", "Digital", "Crucial", "Kingston", "Seagate", "Corsair", "SK", "hynix",
         };
 
-        private static readonly string[] LimitSensorNames = { "Warning Temperature", "Critical Temperature" };
+        private const string WarningLimitSensor = "Warning Temperature";
+        private const string CriticalLimitSensor = "Critical Temperature";
+        private const double DefaultWarningCelsius = 75.0;
+        private const double DefaultCriticalCelsius = 90.0;
+        private const double ApproachCelsius = 10.0;
 
         private static readonly Regex Capacity = new Regex(@"^\d+(\.\d+)?(TB|GB)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
@@ -106,22 +110,56 @@ namespace SysGadget.Core
             return rows;
         }
 
-        /// <summary>GPU core temperature per GPU; the bar shows degrees on a 0 to 100 scale.</summary>
+        /// <summary>GPU core temperature per GPU, with its peak, coloured against the GPU's own limits.</summary>
         /// <param name="readings">One reading per GPU, the hardware name being the GPU name.</param>
-        /// <returns>One row per GPU: "Temp" with one GPU, the short GPU name with more.</returns>
+        /// <returns>One row per GPU without a bar: "Temp" with one GPU, the short GPU name with more.</returns>
         public static IReadOnlyList<MeterRow> GpuTemperature(IReadOnlyList<TemperatureReading> readings)
         {
             List<MeterRow> rows = new List<MeterRow>(readings.Count);
             foreach (TemperatureReading reading in readings)
             {
-                rows.Add(new MeterRow(
-                    readings.Count == 1 ? "Temp" : ShortDeviceName(reading.HardwareName),
-                    Degrees(reading.Celsius),
-                    Math.Max(0.0, Math.Min(100.0, reading.Celsius)),
-                    true));
+                string label = readings.Count == 1 ? "Temp" : ShortDeviceName(reading.HardwareName);
+                rows.Add(TemperatureRow(label, reading, reading.WarningCelsius, reading.CriticalCelsius));
             }
 
             return rows;
+        }
+
+        /// <summary>
+        /// How alarming a temperature is. With device limits: amber from 10 °C below the warning limit,
+        /// red at the critical limit (or at the warning limit when only that is known). Without limits:
+        /// amber from 75 °C, red from 90 °C.
+        /// </summary>
+        /// <param name="celsius">The temperature.</param>
+        /// <param name="warning">The device's warning limit, or null.</param>
+        /// <param name="critical">The device's critical limit, or null.</param>
+        /// <returns>The alert level.</returns>
+        public static AlertLevel TemperatureAlert(double celsius, double? warning, double? critical)
+        {
+            if (warning == null && critical == null)
+            {
+                return celsius >= DefaultCriticalCelsius ? AlertLevel.Critical
+                    : celsius >= DefaultWarningCelsius ? AlertLevel.Warning
+                    : AlertLevel.Normal;
+            }
+
+            double red = critical ?? warning!.Value;
+            double amberFrom = (warning ?? critical!.Value) - ApproachCelsius;
+            return celsius >= red ? AlertLevel.Critical
+                : celsius >= amberFrom ? AlertLevel.Warning
+                : AlertLevel.Normal;
+        }
+
+        private static MeterRow TemperatureRow(string label, TemperatureReading reading, double? warning, double? critical)
+        {
+            return new MeterRow(
+                label,
+                Degrees(reading.Celsius) + " (max " + reading.MaxCelsius.ToString("0", CultureInfo.InvariantCulture) + ")",
+                0.0,
+                false,
+                false,
+                string.Empty,
+                TemperatureAlert(reading.Celsius, warning, critical));
         }
 
         /// <summary>Throughput of the busiest adapter.</summary>
@@ -173,9 +211,9 @@ namespace SysGadget.Core
         }
 
         /// <summary>
-        /// Temperatures; the bar shows degrees on a 0 to 100 scale. Alarm limits that drives report as
-        /// sensors ("Warning Temperature", "Critical Temperature") are fixed values, not readings, and
-        /// are left out.
+        /// Temperatures with their peaks, no bars. Drives report their alarm limits as sensors
+        /// ("Warning Temperature", "Critical Temperature"); those are not shown as rows but used as the
+        /// limits of the other sensors of the same device.
         /// </summary>
         /// <param name="readings">The sensor readings.</param>
         /// <returns>One row per reading, labelled "device sensor", for example "990 PRO Composite".</returns>
@@ -184,19 +222,24 @@ namespace SysGadget.Core
             List<MeterRow> rows = new List<MeterRow>(readings.Count);
             foreach (TemperatureReading reading in readings)
             {
-                if (Array.IndexOf(LimitSensorNames, reading.SensorName) >= 0)
+                if (reading.SensorName == WarningLimitSensor || reading.SensorName == CriticalLimitSensor)
                 {
                     continue;
                 }
 
-                rows.Add(new MeterRow(
-                    ShortDeviceName(reading.HardwareName) + " " + ShortSensorName(reading.SensorName),
-                    Degrees(reading.Celsius),
-                    Math.Max(0.0, Math.Min(100.0, reading.Celsius)),
-                    true));
+                double? warning = reading.WarningCelsius ?? LimitOf(readings, reading.HardwareName, WarningLimitSensor);
+                double? critical = reading.CriticalCelsius ?? LimitOf(readings, reading.HardwareName, CriticalLimitSensor);
+                string label = ShortDeviceName(reading.HardwareName) + " " + ShortSensorName(reading.SensorName);
+                rows.Add(TemperatureRow(label, reading, warning, critical));
             }
 
             return rows;
+        }
+
+        private static double? LimitOf(IReadOnlyList<TemperatureReading> readings, string hardwareName, string limitSensor)
+        {
+            TemperatureReading? limit = readings.FirstOrDefault(r => r.HardwareName == hardwareName && r.SensorName == limitSensor);
+            return limit?.Celsius;
         }
 
         /// <summary>

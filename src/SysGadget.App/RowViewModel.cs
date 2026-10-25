@@ -60,7 +60,11 @@ namespace SysGadget.App
             ValueText = row.ValueText;
             Percent = row.Percent;
             HasBar = row.HasBar;
-            Level = !row.HasBar ? 0 : row.Percent >= CriticalPercent ? 2 : row.Percent >= WarnPercent ? 1 : 0;
+            Level = row.Alert.HasValue ? (int)row.Alert.Value // the builder knows (temperature against device limits)
+                : !row.HasBar ? 0
+                : row.Percent >= CriticalPercent ? 2
+                : row.Percent >= WarnPercent ? 1
+                : 0;
             Raise(nameof(ToolTip));
         }
     }

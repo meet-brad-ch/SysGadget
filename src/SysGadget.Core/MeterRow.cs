@@ -10,7 +10,18 @@ namespace SysGadget.Core
         /// <param name="hasBar">Whether the row draws a bar.</param>
         /// <param name="compact">True draws the row as one thin cell of a strip instead of a line.</param>
         /// <param name="instance">The instance the row belongs to (the disk), for per-instance items; empty otherwise.</param>
-        public MeterRow(string label, string valueText, double percent, bool hasBar, bool compact = false, string instance = "")
+        /// <param name="alert">
+        /// How alarming the value is, when the builder knows (temperatures against device limits);
+        /// null lets the view judge a bar by its fill.
+        /// </param>
+        public MeterRow(
+            string label,
+            string valueText,
+            double percent,
+            bool hasBar,
+            bool compact = false,
+            string instance = "",
+            AlertLevel? alert = null)
         {
             Label = label;
             ValueText = valueText;
@@ -18,7 +29,11 @@ namespace SysGadget.Core
             HasBar = hasBar;
             Compact = compact;
             Instance = instance;
+            Alert = alert;
         }
+
+        /// <summary>How alarming the value is, when the builder knows; null lets the view judge a bar by its fill.</summary>
+        public AlertLevel? Alert { get; }
 
         /// <summary>Left text.</summary>
         public string Label { get; }
